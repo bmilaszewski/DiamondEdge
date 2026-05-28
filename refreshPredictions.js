@@ -29,7 +29,7 @@ function etToday() {
 
 function runPython(script) {
   return new Promise((resolve, reject) => {
-    const proc = spawn('python', [path.join(__dirname, script)], {
+    const proc = spawn('py', [path.join(__dirname, script), '--predict'], {
       cwd: __dirname,
       env: { ...process.env, PYTHONUNBUFFERED: '1' },
     });
@@ -61,37 +61,62 @@ function bustCache() {
   });
 }
 
-// ── parse helpers (mirrors server.js logic) ────────────────────────────────
+// ── parse helpers (must match server.js exactly) ───────────────────────────
 
 function parseWinners(raw) {
-  // Each prediction is a JSON object on its own line
-  const preds = [];
   for (const line of raw.split('\n')) {
-    const t = line.trim();
-    if (!t.startsWith('{')) continue;
-    try { preds.push(JSON.parse(t)); } catch (_) {}
+    if (line.startsWith('PREDSJSON:')) {
+      try {
+        const arr = JSON.parse(line.slice(10));
+        if (Array.isArray(arr) && arr.length) return arr;
+      } catch (_) {}
+    }
   }
-  return preds;
+  return [];
 }
 
 function parseSO(raw) {
-  const preds = [];
-  for (const line of raw.split('\n')) {
-    const t = line.trim();
-    if (!t.startsWith('{')) continue;
-    try { preds.push(JSON.parse(t)); } catch (_) {}
+  const predictions = [];
+  let inPredictions = false;
+  for (const raw_line of raw.split('\n')) {
+    const line = raw_line.trim();
+    if (line.includes("TODAY'S STRIKEOUT PREDICTIONS")) { inPredictions = true; continue; }
+    if (!inPredictions) continue;
+    if (!line || line.includes('PITCHER') || line.includes('---') ||
+        line.includes('===') || line.includes('──') ||
+        line.startsWith('[skip]') || line.startsWith('[warn]') ||
+        line.startsWith('Date:') || /^\d+ pitchers/.test(line)) continue;
+    const parts = line.split(/\s{2,}/);
+    if (parts.length < 6) continue;
+    try {
+      const num = v => { if (!v) return null; const n = parseFloat(v.replace('%','').replace('—','').trim()); return isNaN(n) ? null : n; };
+      const lk = num(parts[9]);
+      const pred = {
+        pitcher: parts[0], team: parts[1], opponent: parts[2],
+        pred_k: num(parts[3]), k_pct: num(parts[5]),
+        whiff_pct: num(parts[6]), iz_contact_pct: num(parts[7]),
+        chase_pct: num(parts[8]), lineup_iz: num(parts[11]),
+        lineup_chase: num(parts[12]), lineup_bat_speed: num(parts[13]),
+        lineup_vuln: lk != null ? (lk - 22.5) / 22.5 : null,
+        data_quality: parts[14] || null,
+        exp_k_rate: num(parts[5]) != null ? num(parts[5]) * 0.82 : null,
+      };
+      if (pred.pred_k != null) predictions.push(pred);
+    } catch (_) {}
   }
-  return preds;
+  return predictions;
 }
 
 function parseHR(raw) {
-  const preds = [];
   for (const line of raw.split('\n')) {
-    const t = line.trim();
-    if (!t.startsWith('{')) continue;
-    try { preds.push(JSON.parse(t)); } catch (_) {}
+    if (line.startsWith('HRJSON:')) {
+      try {
+        const arr = JSON.parse(line.slice(7));
+        if (Array.isArray(arr) && arr.length) return arr;
+      } catch (_) {}
+    }
   }
-  return preds;
+  return [];
 }
 
 // home/away flip using betting_odds as ground truth
