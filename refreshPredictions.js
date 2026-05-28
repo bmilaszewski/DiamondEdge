@@ -251,7 +251,7 @@ async function saveWinners(preds, date, startedKeys) {
       proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side)
      VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?)`
   );
-  let saved = 0;
+  let updated = 0, preserved = 0;
   for (const p of preds) {
     const gn  = p.game_number || 1;
     const key = p.away + '@' + p.home + (gn > 1 ? ':' + gn : '');
@@ -269,6 +269,7 @@ async function saveWinners(preds, date, startedKeys) {
         p.same_side != null ? (p.same_side ? 1 : 0) : null,
         date, gn, p.away, p.home,
       ]);
+      updated++;
     } else {
       // In-progress or finished: keep original pre-game pick, never overwrite
       stmtIgnore.run([
@@ -277,12 +278,13 @@ async function saveWinners(preds, date, startedKeys) {
         p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
         p.same_side != null ? (p.same_side ? 1 : 0) : null,
       ]);
+      preserved++;
     }
-    saved++;
   }
   stmtReplace.finalize();
   stmtIgnore.finalize();
-  return saved;
+  if (preserved) process.stdout.write(`${updated} updated, ${preserved} preserved  `);
+  return updated + preserved;
 }
 
 async function saveSO(preds, date, startedTeams) {
@@ -299,6 +301,7 @@ async function saveSO(preds, date, startedTeams) {
       iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
+  let updated = 0, preserved = 0;
   for (const p of preds) {
     const vals = [
       date, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
@@ -306,11 +309,13 @@ async function saveSO(preds, date, startedTeams) {
       p.lineup_iz || null, p.lineup_chase || null, p.lineup_bat_speed || null,
       p.lineup_vuln || null, p.exp_k_rate || null, p.data_quality || null,
     ];
-    (startedTeams.has(p.team) ? stmtIgnore : stmtReplace).run(vals);
+    if (startedTeams.has(p.team)) { stmtIgnore.run(vals); preserved++; }
+    else { stmtReplace.run(vals); updated++; }
   }
   stmtReplace.finalize();
   stmtIgnore.finalize();
-  return preds.length;
+  if (preserved) process.stdout.write(`${updated} updated, ${preserved} preserved  `);
+  return updated + preserved;
 }
 
 async function saveHR(preds, date, startedTeams) {
@@ -327,6 +332,7 @@ async function saveHR(preds, date, startedTeams) {
       batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
+  let updated = 0, preserved = 0;
   for (const p of preds) {
     const vals = [
       date, p.batter, p.team, p.vs_pitcher || null,
@@ -336,11 +342,13 @@ async function saveHR(preds, date, startedTeams) {
       p.batting_order || null, p.home_team || null, p.opponent || null,
       p.temp_f || null, p.wind_mph || null, p.weather_cond || null,
     ];
-    (startedTeams.has(p.team) ? stmtIgnore : stmtReplace).run(vals);
+    if (startedTeams.has(p.team)) { stmtIgnore.run(vals); preserved++; }
+    else { stmtReplace.run(vals); updated++; }
   }
   stmtReplace.finalize();
   stmtIgnore.finalize();
-  return preds.length;
+  if (preserved) process.stdout.write(`${updated} updated, ${preserved} preserved  `);
+  return updated + preserved;
 }
 
 // ── main ───────────────────────────────────────────────────────────────────
