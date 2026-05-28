@@ -1,121 +1,25 @@
+'use strict';
+
 /**
  * refreshPredictions.js
  *
- * The ONLY way to refresh existing predictions for today.
- * Runs all three predictors (winners, strikeouts, home runs) with INSERT OR REPLACE,
- * overwriting whatever is in the DB.
+ * Admin script — the only way to force-refresh predictions for today.
+ * Runs all three predictors and saves with INSERT OR REPLACE, overwriting
+ * whatever is currently in the DB regardless of game state.
  *
  * Usage:
  *   node refreshPredictions.js
  *
- * The server must be running. After saving to DB this script calls the server's
- * internal cache-bust endpoint so the next page load picks up the fresh data.
+ * The server must be running. After saving, calls the internal cache-bust
+ * endpoint so the next page load picks up the fresh data immediately.
  */
 
-'use strict';
-
-const path   = require('path');
-const http   = require('http');
-const https  = require('https');
-const { spawn } = require('child_process');
-const db     = require('./db');
+const path       = require('path');
+const http       = require('http');
+const { spawn }  = require('child_process');
+const db         = require('./db');
 
 const SERVER_PORT = 3000;
-
-// ── ESPN team name normalisation (must stay in sync with server.js) ─────────
-
-const ESPN_TEAM_MAP = {
-  "Arizona Diamondbacks":"AZ","Atlanta Braves":"ATL","Baltimore Orioles":"BAL",
-  "Boston Red Sox":"BOS","Chicago Cubs":"CHC","Chicago White Sox":"CWS",
-  "Cincinnati Reds":"CIN","Cleveland Guardians":"CLE","Colorado Rockies":"COL",
-  "Detroit Tigers":"DET","Houston Astros":"HOU","Kansas City Royals":"KC",
-  "Los Angeles Angels":"LAA","Los Angeles Dodgers":"LAD","Miami Marlins":"MIA",
-  "Milwaukee Brewers":"MIL","Minnesota Twins":"MIN","New York Mets":"NYM",
-  "New York Yankees":"NYY","Oakland Athletics":"ATH","Philadelphia Phillies":"PHI",
-  "Pittsburgh Pirates":"PIT","San Diego Padres":"SD","San Francisco Giants":"SF",
-  "Seattle Mariners":"SEA","St. Louis Cardinals":"STL","Tampa Bay Rays":"TB",
-  "Texas Rangers":"TEX","Toronto Blue Jays":"TOR","Washington Nationals":"WSH",
-  "Diamondbacks":"AZ","Braves":"ATL","Orioles":"BAL","Red Sox":"BOS","Cubs":"CHC",
-  "White Sox":"CWS","Reds":"CIN","Guardians":"CLE","Rockies":"COL","Tigers":"DET",
-  "Astros":"HOU","Royals":"KC","Angels":"LAA","Dodgers":"LAD","Marlins":"MIA",
-  "Brewers":"MIL","Twins":"MIN","Mets":"NYM","Yankees":"NYY","Phillies":"PHI",
-  "Pirates":"PIT","Padres":"SD","Giants":"SF","Mariners":"SEA","Cardinals":"STL",
-  "Rays":"TB","Rangers":"TEX","Blue Jays":"TOR","Nationals":"WSH",
-  "ARI":"ARI","AZ":"ARI","ATL":"ATL","BAL":"BAL","BOS":"BOS","CHC":"CHC",
-  "CWS":"CWS","CIN":"CIN","CLE":"CLE","COL":"COL","DET":"DET","HOU":"HOU",
-  "KC":"KC","KCR":"KC","LAA":"LAA","LAD":"LAD","MIA":"MIA","MIL":"MIL",
-  "MIN":"MIN","NYM":"NYM","NYY":"NYY","OAK":"ATH","PHI":"PHI","PIT":"PIT",
-  "SD":"SD","SDP":"SD","SF":"SF","SFG":"SF","SEA":"SEA","STL":"STL",
-  "TB":"TB","TBR":"TB","TEX":"TEX","TOR":"TOR","WSH":"WSH","WSN":"WSH",
-};
-
-function normTeam(name) {
-  if (!name) return null;
-  const n = String(name).trim();
-  if (ESPN_TEAM_MAP[n]) return ESPN_TEAM_MAP[n];
-  const words = n.split(' ');
-  for (let i = 1; i < words.length; i++) {
-    const sub = words.slice(i).join(' ');
-    if (ESPN_TEAM_MAP[sub]) return ESPN_TEAM_MAP[sub];
-  }
-  if (n.length <= 4 && n === n.toUpperCase()) return n;
-  return null;
-}
-
-// Fetch which games have started or finished from ESPN.
-// Returns { startedKeys: Set<'AWAY@HOME[:N]'>, startedTeams: Set<abbrev> }
-function fetchStartedGames(date) {
-  return new Promise(resolve => {
-    const dateCompact = date.replace(/-/g, '');
-    const url = `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${dateCompact}&limit=30`;
-    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
-      let body = '';
-      res.on('data', d => { body += d; });
-      res.on('end', () => {
-        try {
-          const eventsRaw = JSON.parse(body).events || [];
-          const events = eventsRaw.sort((a, b) =>
-            (a.date ? new Date(a.date).getTime() : 0) - (b.date ? new Date(b.date).getTime() : 0)
-          );
-          const inProgressKeys  = new Set(); // 'in' state only
-          const finishedKeys    = new Set(); // 'post' state only
-          const inProgressTeams = new Set();
-          const finishedTeams   = new Set();
-          const seenPairs = {};
-          for (const event of events) {
-            const comp = (event.competitions || [])[0];
-            if (!comp) continue;
-            const state = comp.status?.type?.state || 'pre';
-            if (state === 'pre') continue;
-            let homeTeam = null, awayTeam = null;
-            for (const c of (comp.competitors || [])) {
-              const t = normTeam(c.team?.displayName || c.team?.name || '') || normTeam(c.team?.abbreviation || '');
-              if (c.homeAway === 'home') homeTeam = t;
-              else awayTeam = t;
-            }
-            if (!homeTeam || !awayTeam) continue;
-            const pairId = awayTeam + '|' + homeTeam;
-            seenPairs[pairId] = (seenPairs[pairId] || 0) + 1;
-            const gn  = seenPairs[pairId];
-            const key = awayTeam + '@' + homeTeam + (gn > 1 ? ':' + gn : '');
-            if (state === 'in') {
-              inProgressKeys.add(key);
-              inProgressTeams.add(homeTeam);
-              inProgressTeams.add(awayTeam);
-            } else {
-              finishedKeys.add(key);
-              finishedTeams.add(homeTeam);
-              finishedTeams.add(awayTeam);
-            }
-          }
-          resolve({ inProgressKeys, finishedKeys, inProgressTeams, finishedTeams });
-        } catch (_) {
-          resolve({ inProgressKeys: new Set(), finishedKeys: new Set(), inProgressTeams: new Set(), finishedTeams: new Set() });
-        }
-      });
-    }).on('error', () => resolve({ inProgressKeys: new Set(), finishedKeys: new Set(), inProgressTeams: new Set(), finishedTeams: new Set() }));
-  });
-}
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -243,10 +147,10 @@ async function applyFlip(preds, date) {
 
 // ── save functions ─────────────────────────────────────────────────────────
 
-async function saveWinners(preds, date, inProgressKeys, finishedKeys) {
+async function saveWinners(preds, date) {
   if (!preds.length) return 0;
   await applyFlip(preds, date);
-  const stmtReplace = db.prepare(
+  const stmt = db.prepare(
     `INSERT OR REPLACE INTO game_predictions
      (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,
       proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side,reason)
@@ -254,128 +158,64 @@ async function saveWinners(preds, date, inProgressKeys, finishedKeys) {
        (SELECT reason FROM game_predictions
         WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?))`
   );
-  const stmtIgnore = db.prepare(
-    `INSERT OR IGNORE INTO game_predictions
-     (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,
-      proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?)`
-  );
-  let updated = 0, preserved = 0;
   for (const p of preds) {
-    const gn      = p.game_number || 1;
-    const key     = p.away + '@' + p.home + (gn > 1 ? ':' + gn : '');
-    const inProgress = inProgressKeys.has(key);
-    const finished   = finishedKeys.has(key);
-
-    if (!inProgress && !finished) {
-      // Pre-game: safe to remove stale opposite-direction row and replace in full
-      db.run(
-        'DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
-        [date, gn, p.home, p.away]
-      );
-      stmtReplace.run([
-        date, gn, p.away, p.home, p.pick, p.confidence,
-        p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
-        p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
-        p.same_side != null ? (p.same_side ? 1 : 0) : null,
-        date, gn, p.away, p.home,
-      ]);
-      updated++;
-    } else if (inProgress) {
-      // In-progress: model has seen live odds and is score-biased.
-      // Ensure a row exists (OR IGNORE), then only update pitcher names —
-      // pick, probabilities, and odds-derived fields stay frozen at pre-game values.
-      stmtIgnore.run([
-        date, gn, p.away, p.home, p.pick, p.confidence,
-        p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
-        p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
-        p.same_side != null ? (p.same_side ? 1 : 0) : null,
-      ]);
-      db.run(
-        `UPDATE game_predictions SET home_sp = COALESCE(?, home_sp), away_sp = COALESCE(?, away_sp)
-         WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?`,
-        [p.home_sp || null, p.away_sp || null, date, gn, p.away, p.home]
-      );
-      preserved++;
-    } else {
-      // Finished: fully frozen, don't touch anything
-      stmtIgnore.run([
-        date, gn, p.away, p.home, p.pick, p.confidence,
-        p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
-        p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
-        p.same_side != null ? (p.same_side ? 1 : 0) : null,
-      ]);
-      preserved++;
-    }
+    const gn = p.game_number || 1;
+    db.run(
+      'DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
+      [date, gn, p.home, p.away]
+    );
+    stmt.run([
+      date, gn, p.away, p.home, p.pick, p.confidence,
+      p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
+      p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
+      p.same_side != null ? (p.same_side ? 1 : 0) : null,
+      date, gn, p.away, p.home,
+    ]);
   }
-  stmtReplace.finalize();
-  stmtIgnore.finalize();
-  if (preserved) process.stdout.write(`${updated} updated, ${preserved} locked  `);
-  return updated + preserved;
+  stmt.finalize();
+  return preds.length;
 }
 
-async function saveSO(preds, date, inProgressTeams, finishedTeams) {
+async function saveSO(preds, date) {
   if (!preds.length) return 0;
-  const stmtReplace = db.prepare(
+  const stmt = db.prepare(
     `INSERT OR REPLACE INTO strikeout_predictions
      (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
       iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
-  const stmtIgnore = db.prepare(
-    `INSERT OR IGNORE INTO strikeout_predictions
-     (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
-      iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-  );
-  let updated = 0, preserved = 0;
   for (const p of preds) {
-    const vals = [
+    stmt.run([
       date, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
       p.whiff_pct || null, p.chase_pct || null, p.iz_contact_pct || null,
       p.lineup_iz || null, p.lineup_chase || null, p.lineup_bat_speed || null,
       p.lineup_vuln || null, p.exp_k_rate || null, p.data_quality || null,
-    ];
-    if (finishedTeams.has(p.team) || inProgressTeams.has(p.team)) { stmtIgnore.run(vals); preserved++; }
-    else { stmtReplace.run(vals); updated++; }
+    ]);
   }
-  stmtReplace.finalize();
-  stmtIgnore.finalize();
-  if (preserved) process.stdout.write(`${updated} updated, ${preserved} locked  `);
-  return updated + preserved;
+  stmt.finalize();
+  return preds.length;
 }
 
-async function saveHR(preds, date, inProgressTeams, finishedTeams) {
+async function saveHR(preds, date) {
   if (!preds.length) return 0;
-  const stmtReplace = db.prepare(
+  const stmt = db.prepare(
     `INSERT OR REPLACE INTO homerun_predictions
      (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
       batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
-  const stmtIgnore = db.prepare(
-    `INSERT OR IGNORE INTO homerun_predictions
-     (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
-      batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-  );
-  let updated = 0, preserved = 0;
   for (const p of preds) {
-    const vals = [
+    stmt.run([
       date, p.batter, p.team, p.vs_pitcher || null,
       p.hr_prob_per_pa ?? p.hr_prob_pa ?? null,
       p.hr_prob_per_game ?? p.hr_prob_game ?? null,
       p.park_factor || null, p.weather_factor || null,
       p.batting_order || null, p.home_team || null, p.opponent || null,
       p.temp_f || null, p.wind_mph || null, p.weather_cond || null,
-    ];
-    if (finishedTeams.has(p.team) || inProgressTeams.has(p.team)) { stmtIgnore.run(vals); preserved++; }
-    else { stmtReplace.run(vals); updated++; }
+    ]);
   }
-  stmtReplace.finalize();
-  stmtIgnore.finalize();
-  if (preserved) process.stdout.write(`${updated} updated, ${preserved} locked  `);
-  return updated + preserved;
+  stmt.finalize();
+  return preds.length;
 }
 
 // ── main ───────────────────────────────────────────────────────────────────
@@ -384,49 +224,36 @@ async function main() {
   const today = etToday();
   console.log(`\nRefreshing all predictions for ${today}...\n`);
 
-  // Check game states so we can protect picks appropriately:
-  //   in-progress → update SP names only, freeze pick/probabilities (model sees live odds)
-  //   finished    → fully frozen, no changes at all
-  const { inProgressKeys, finishedKeys, inProgressTeams, finishedTeams } = await fetchStartedGames(today);
-  const notes = [];
-  if (inProgressKeys.size) notes.push(`${inProgressKeys.size} in progress (picks frozen)`);
-  if (finishedKeys.size)   notes.push(`${finishedKeys.size} finished (fully frozen)`);
-  if (notes.length) console.log(`  (${notes.join(', ')})\n`);
-
-  // Winners
   process.stdout.write('  Running winner predictor...     ');
   try {
     const raw   = await runPython('predictorv4.py');
     const preds = parseWinners(raw);
-    const n     = await saveWinners(preds, today, inProgressKeys, finishedKeys);
+    const n     = await saveWinners(preds, today);
     console.log(`${n} game(s) saved`);
   } catch (e) {
     console.log(`FAILED — ${e.message}`);
   }
 
-  // Strikeouts
   process.stdout.write('  Running strikeout predictor...  ');
   try {
     const raw   = await runPython('strikeoutPredictorv2.py');
     const preds = parseSO(raw);
-    const n     = await saveSO(preds, today, inProgressTeams, finishedTeams);
+    const n     = await saveSO(preds, today);
     console.log(`${n} pitcher(s) saved`);
   } catch (e) {
     console.log(`FAILED — ${e.message}`);
   }
 
-  // Home runs
   process.stdout.write('  Running home run predictor...   ');
   try {
     const raw   = await runPython('hrPredictor.py');
     const preds = parseHR(raw);
-    const n     = await saveHR(preds, today, inProgressTeams, finishedTeams);
+    const n     = await saveHR(preds, today);
     console.log(`${n} batter(s) saved`);
   } catch (e) {
     console.log(`FAILED — ${e.message}`);
   }
 
-  // Bust server caches so next page load reads fresh DB data
   process.stdout.write('\n  Clearing server caches...       ');
   await bustCache();
   console.log('done');
@@ -435,5 +262,4 @@ async function main() {
   setTimeout(() => process.exit(0), 500);
 }
 
-// Wait for db.js to finish table creation before running
 setTimeout(main, 800);
