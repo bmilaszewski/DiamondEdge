@@ -147,75 +147,83 @@ async function applyFlip(preds, date) {
 
 // ── save functions ─────────────────────────────────────────────────────────
 
-async function saveWinners(preds, date) {
-  if (!preds.length) return 0;
-  await applyFlip(preds, date);
-  const stmt = db.prepare(
-    `INSERT OR REPLACE INTO game_predictions
-     (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,
-      proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side,reason)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?,
-       (SELECT reason FROM game_predictions
-        WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?))`
-  );
-  for (const p of preds) {
-    const gn = p.game_number || 1;
-    db.run(
-      'DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
-      [date, gn, p.home, p.away]
-    );
-    stmt.run([
-      date, gn, p.away, p.home, p.pick, p.confidence,
-      p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
-      p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
-      p.same_side != null ? (p.same_side ? 1 : 0) : null,
-      date, gn, p.away, p.home,
-    ]);
-  }
-  stmt.finalize();
-  return preds.length;
+function saveWinners(preds, date) {
+  if (!preds.length) return Promise.resolve(0);
+  return applyFlip(preds, date).then(() => new Promise((resolve, reject) => {
+    db.serialize(() => {
+      const stmt = db.prepare(
+        `INSERT OR REPLACE INTO game_predictions
+         (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,
+          proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side,reason)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?,
+           (SELECT reason FROM game_predictions
+            WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?))`
+      );
+      for (const p of preds) {
+        const gn = p.game_number || 1;
+        db.run(
+          'DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
+          [date, gn, p.home, p.away]
+        );
+        stmt.run([
+          date, gn, p.away, p.home, p.pick, p.confidence,
+          p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
+          p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
+          p.same_side != null ? (p.same_side ? 1 : 0) : null,
+          date, gn, p.away, p.home,
+        ]);
+      }
+      stmt.finalize(err => err ? reject(err) : resolve(preds.length));
+    });
+  }));
 }
 
-async function saveSO(preds, date) {
-  if (!preds.length) return 0;
-  const stmt = db.prepare(
-    `INSERT OR REPLACE INTO strikeout_predictions
-     (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
-      iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-  );
-  for (const p of preds) {
-    stmt.run([
-      date, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
-      p.whiff_pct || null, p.chase_pct || null, p.iz_contact_pct || null,
-      p.lineup_iz || null, p.lineup_chase || null, p.lineup_bat_speed || null,
-      p.lineup_vuln || null, p.exp_k_rate || null, p.data_quality || null,
-    ]);
-  }
-  stmt.finalize();
-  return preds.length;
+function saveSO(preds, date) {
+  if (!preds.length) return Promise.resolve(0);
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      const stmt = db.prepare(
+        `INSERT OR REPLACE INTO strikeout_predictions
+         (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
+          iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      );
+      for (const p of preds) {
+        stmt.run([
+          date, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
+          p.whiff_pct || null, p.chase_pct || null, p.iz_contact_pct || null,
+          p.lineup_iz || null, p.lineup_chase || null, p.lineup_bat_speed || null,
+          p.lineup_vuln || null, p.exp_k_rate || null, p.data_quality || null,
+        ]);
+      }
+      stmt.finalize(err => err ? reject(err) : resolve(preds.length));
+    });
+  });
 }
 
-async function saveHR(preds, date) {
-  if (!preds.length) return 0;
-  const stmt = db.prepare(
-    `INSERT OR REPLACE INTO homerun_predictions
-     (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
-      batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-  );
-  for (const p of preds) {
-    stmt.run([
-      date, p.batter, p.team, p.vs_pitcher || null,
-      p.hr_prob_per_pa ?? p.hr_prob_pa ?? null,
-      p.hr_prob_per_game ?? p.hr_prob_game ?? null,
-      p.park_factor || null, p.weather_factor || null,
-      p.batting_order || null, p.home_team || null, p.opponent || null,
-      p.temp_f || null, p.wind_mph || null, p.weather_cond || null,
-    ]);
-  }
-  stmt.finalize();
-  return preds.length;
+function saveHR(preds, date) {
+  if (!preds.length) return Promise.resolve(0);
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      const stmt = db.prepare(
+        `INSERT OR REPLACE INTO homerun_predictions
+         (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
+          batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      );
+      for (const p of preds) {
+        stmt.run([
+          date, p.batter, p.team, p.vs_pitcher || null,
+          p.hr_prob_per_pa ?? p.hr_prob_pa ?? null,
+          p.hr_prob_per_game ?? p.hr_prob_game ?? null,
+          p.park_factor || null, p.weather_factor || null,
+          p.batting_order || null, p.home_team || null, p.opponent || null,
+          p.temp_f || null, p.wind_mph || null, p.weather_cond || null,
+        ]);
+      }
+      stmt.finalize(err => err ? reject(err) : resolve(preds.length));
+    });
+  });
 }
 
 // ── main ───────────────────────────────────────────────────────────────────
