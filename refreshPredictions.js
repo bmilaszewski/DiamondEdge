@@ -16,10 +16,97 @@
 
 const path   = require('path');
 const http   = require('http');
+const https  = require('https');
 const { spawn } = require('child_process');
 const db     = require('./db');
 
 const SERVER_PORT = 3000;
+
+// ── ESPN team name normalisation (must stay in sync with server.js) ─────────
+
+const ESPN_TEAM_MAP = {
+  "Arizona Diamondbacks":"AZ","Atlanta Braves":"ATL","Baltimore Orioles":"BAL",
+  "Boston Red Sox":"BOS","Chicago Cubs":"CHC","Chicago White Sox":"CWS",
+  "Cincinnati Reds":"CIN","Cleveland Guardians":"CLE","Colorado Rockies":"COL",
+  "Detroit Tigers":"DET","Houston Astros":"HOU","Kansas City Royals":"KC",
+  "Los Angeles Angels":"LAA","Los Angeles Dodgers":"LAD","Miami Marlins":"MIA",
+  "Milwaukee Brewers":"MIL","Minnesota Twins":"MIN","New York Mets":"NYM",
+  "New York Yankees":"NYY","Oakland Athletics":"ATH","Philadelphia Phillies":"PHI",
+  "Pittsburgh Pirates":"PIT","San Diego Padres":"SD","San Francisco Giants":"SF",
+  "Seattle Mariners":"SEA","St. Louis Cardinals":"STL","Tampa Bay Rays":"TB",
+  "Texas Rangers":"TEX","Toronto Blue Jays":"TOR","Washington Nationals":"WSH",
+  "Diamondbacks":"AZ","Braves":"ATL","Orioles":"BAL","Red Sox":"BOS","Cubs":"CHC",
+  "White Sox":"CWS","Reds":"CIN","Guardians":"CLE","Rockies":"COL","Tigers":"DET",
+  "Astros":"HOU","Royals":"KC","Angels":"LAA","Dodgers":"LAD","Marlins":"MIA",
+  "Brewers":"MIL","Twins":"MIN","Mets":"NYM","Yankees":"NYY","Phillies":"PHI",
+  "Pirates":"PIT","Padres":"SD","Giants":"SF","Mariners":"SEA","Cardinals":"STL",
+  "Rays":"TB","Rangers":"TEX","Blue Jays":"TOR","Nationals":"WSH",
+  "ARI":"ARI","AZ":"ARI","ATL":"ATL","BAL":"BAL","BOS":"BOS","CHC":"CHC",
+  "CWS":"CWS","CIN":"CIN","CLE":"CLE","COL":"COL","DET":"DET","HOU":"HOU",
+  "KC":"KC","KCR":"KC","LAA":"LAA","LAD":"LAD","MIA":"MIA","MIL":"MIL",
+  "MIN":"MIN","NYM":"NYM","NYY":"NYY","OAK":"ATH","PHI":"PHI","PIT":"PIT",
+  "SD":"SD","SDP":"SD","SF":"SF","SFG":"SF","SEA":"SEA","STL":"STL",
+  "TB":"TB","TBR":"TB","TEX":"TEX","TOR":"TOR","WSH":"WSH","WSN":"WSH",
+};
+
+function normTeam(name) {
+  if (!name) return null;
+  const n = String(name).trim();
+  if (ESPN_TEAM_MAP[n]) return ESPN_TEAM_MAP[n];
+  const words = n.split(' ');
+  for (let i = 1; i < words.length; i++) {
+    const sub = words.slice(i).join(' ');
+    if (ESPN_TEAM_MAP[sub]) return ESPN_TEAM_MAP[sub];
+  }
+  if (n.length <= 4 && n === n.toUpperCase()) return n;
+  return null;
+}
+
+// Fetch which games have started or finished from ESPN.
+// Returns { startedKeys: Set<'AWAY@HOME[:N]'>, startedTeams: Set<abbrev> }
+function fetchStartedGames(date) {
+  return new Promise(resolve => {
+    const dateCompact = date.replace(/-/g, '');
+    const url = `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${dateCompact}&limit=30`;
+    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+      let body = '';
+      res.on('data', d => { body += d; });
+      res.on('end', () => {
+        try {
+          const eventsRaw = JSON.parse(body).events || [];
+          const events = eventsRaw.sort((a, b) =>
+            (a.date ? new Date(a.date).getTime() : 0) - (b.date ? new Date(b.date).getTime() : 0)
+          );
+          const startedKeys  = new Set();
+          const startedTeams = new Set();
+          const seenPairs = {};
+          for (const event of events) {
+            const comp = (event.competitions || [])[0];
+            if (!comp) continue;
+            const state = comp.status?.type?.state || 'pre';
+            if (state === 'pre') continue;
+            let homeTeam = null, awayTeam = null;
+            for (const c of (comp.competitors || [])) {
+              const t = normTeam(c.team?.displayName || c.team?.name || '') || normTeam(c.team?.abbreviation || '');
+              if (c.homeAway === 'home') homeTeam = t;
+              else awayTeam = t;
+            }
+            if (!homeTeam || !awayTeam) continue;
+            const pairId = awayTeam + '|' + homeTeam;
+            seenPairs[pairId] = (seenPairs[pairId] || 0) + 1;
+            const gn = seenPairs[pairId];
+            startedKeys.add(awayTeam + '@' + homeTeam + (gn > 1 ? ':' + gn : ''));
+            startedTeams.add(homeTeam);
+            startedTeams.add(awayTeam);
+          }
+          resolve({ startedKeys, startedTeams });
+        } catch (_) {
+          resolve({ startedKeys: new Set(), startedTeams: new Set() });
+        }
+      });
+    }).on('error', () => resolve({ startedKeys: new Set(), startedTeams: new Set() }));
+  });
+}
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -147,10 +234,10 @@ async function applyFlip(preds, date) {
 
 // ── save functions ─────────────────────────────────────────────────────────
 
-async function saveWinners(preds, date) {
+async function saveWinners(preds, date, startedKeys) {
   if (!preds.length) return 0;
   await applyFlip(preds, date);
-  const stmt = db.prepare(
+  const stmtReplace = db.prepare(
     `INSERT OR REPLACE INTO game_predictions
      (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,
       proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side,reason)
@@ -158,66 +245,101 @@ async function saveWinners(preds, date) {
        (SELECT reason FROM game_predictions
         WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?))`
   );
+  const stmtIgnore = db.prepare(
+    `INSERT OR IGNORE INTO game_predictions
+     (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,
+      proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?)`
+  );
   let saved = 0;
   for (const p of preds) {
-    const gn = p.game_number || 1;
-    // Remove any stale opposite-direction row
-    db.run(
-      'DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
-      [date, gn, p.home, p.away]
-    );
-    stmt.run([
-      date, gn, p.away, p.home, p.pick, p.confidence,
-      p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
-      p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
-      p.same_side != null ? (p.same_side ? 1 : 0) : null,
-      date, gn, p.away, p.home,
-    ]);
+    const gn  = p.game_number || 1;
+    const key = p.away + '@' + p.home + (gn > 1 ? ':' + gn : '');
+    const started = startedKeys.has(key);
+    if (!started) {
+      // Pre-game: safe to remove stale opposite-direction row and replace
+      db.run(
+        'DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
+        [date, gn, p.home, p.away]
+      );
+      stmtReplace.run([
+        date, gn, p.away, p.home, p.pick, p.confidence,
+        p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
+        p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
+        p.same_side != null ? (p.same_side ? 1 : 0) : null,
+        date, gn, p.away, p.home,
+      ]);
+    } else {
+      // In-progress or finished: keep original pre-game pick, never overwrite
+      stmtIgnore.run([
+        date, gn, p.away, p.home, p.pick, p.confidence,
+        p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
+        p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
+        p.same_side != null ? (p.same_side ? 1 : 0) : null,
+      ]);
+    }
     saved++;
   }
-  stmt.finalize();
+  stmtReplace.finalize();
+  stmtIgnore.finalize();
   return saved;
 }
 
-async function saveSO(preds, date) {
+async function saveSO(preds, date, startedTeams) {
   if (!preds.length) return 0;
-  const stmt = db.prepare(
+  const stmtReplace = db.prepare(
     `INSERT OR REPLACE INTO strikeout_predictions
      (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
       iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
+  const stmtIgnore = db.prepare(
+    `INSERT OR IGNORE INTO strikeout_predictions
+     (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
+      iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+  );
   for (const p of preds) {
-    stmt.run([
+    const vals = [
       date, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
       p.whiff_pct || null, p.chase_pct || null, p.iz_contact_pct || null,
       p.lineup_iz || null, p.lineup_chase || null, p.lineup_bat_speed || null,
       p.lineup_vuln || null, p.exp_k_rate || null, p.data_quality || null,
-    ]);
+    ];
+    (startedTeams.has(p.team) ? stmtIgnore : stmtReplace).run(vals);
   }
-  stmt.finalize();
+  stmtReplace.finalize();
+  stmtIgnore.finalize();
   return preds.length;
 }
 
-async function saveHR(preds, date) {
+async function saveHR(preds, date, startedTeams) {
   if (!preds.length) return 0;
-  const stmt = db.prepare(
+  const stmtReplace = db.prepare(
     `INSERT OR REPLACE INTO homerun_predictions
      (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
       batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
+  const stmtIgnore = db.prepare(
+    `INSERT OR IGNORE INTO homerun_predictions
+     (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
+      batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+  );
   for (const p of preds) {
-    stmt.run([
+    const vals = [
       date, p.batter, p.team, p.vs_pitcher || null,
       p.hr_prob_per_pa ?? p.hr_prob_pa ?? null,
       p.hr_prob_per_game ?? p.hr_prob_game ?? null,
       p.park_factor || null, p.weather_factor || null,
       p.batting_order || null, p.home_team || null, p.opponent || null,
       p.temp_f || null, p.wind_mph || null, p.weather_cond || null,
-    ]);
+    ];
+    (startedTeams.has(p.team) ? stmtIgnore : stmtReplace).run(vals);
   }
-  stmt.finalize();
+  stmtReplace.finalize();
+  stmtIgnore.finalize();
   return preds.length;
 }
 
@@ -227,12 +349,20 @@ async function main() {
   const today = etToday();
   console.log(`\nRefreshing all predictions for ${today}...\n`);
 
+  // Check which games have already started or finished — their predictions
+  // will be protected with INSERT OR IGNORE so the original pre-game pick
+  // is never overwritten by a score-aware mid/post-game model run.
+  const { startedKeys, startedTeams } = await fetchStartedGames(today);
+  if (startedKeys.size) {
+    console.log(`  (${startedKeys.size} game(s) in progress or finished — original picks preserved)\n`);
+  }
+
   // Winners
   process.stdout.write('  Running winner predictor...     ');
   try {
     const raw   = await runPython('predictorv4.py');
     const preds = parseWinners(raw);
-    const n     = await saveWinners(preds, today);
+    const n     = await saveWinners(preds, today, startedKeys);
     console.log(`${n} game(s) saved`);
   } catch (e) {
     console.log(`FAILED — ${e.message}`);
@@ -243,7 +373,7 @@ async function main() {
   try {
     const raw   = await runPython('strikeoutPredictorv2.py');
     const preds = parseSO(raw);
-    const n     = await saveSO(preds, today);
+    const n     = await saveSO(preds, today, startedTeams);
     console.log(`${n} pitcher(s) saved`);
   } catch (e) {
     console.log(`FAILED — ${e.message}`);
@@ -254,7 +384,7 @@ async function main() {
   try {
     const raw   = await runPython('hrPredictor.py');
     const preds = parseHR(raw);
-    const n     = await saveHR(preds, today);
+    const n     = await saveHR(preds, today, startedTeams);
     console.log(`${n} batter(s) saved`);
   } catch (e) {
     console.log(`FAILED — ${e.message}`);
