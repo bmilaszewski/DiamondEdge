@@ -1,0 +1,2602 @@
+{
+  "ANA01": {
+    "park_id": "ANA01",
+    "name": "Angel Stadium of Anaheim",
+    "city": "Anaheim",
+    "state": "CA",
+    "lat": 33.8002599,
+    "lng": -117.8817426,
+    "method": "name",
+    "end": null
+  },
+  "ARL03": {
+    "park_id": "ARL03",
+    "name": "Globe Life Field in Arlington",
+    "city": "Arlington",
+    "state": "TX",
+    "lat": 32.7355816,
+    "lng": -97.1071186,
+    "method": "city",
+    "end": null
+  },
+  "ATL03": {
+    "park_id": "ATL03",
+    "name": "Suntrust Park",
+    "city": "Atlanta",
+    "state": "GA",
+    "lat": 33.890738,
+    "lng": -84.4676163,
+    "method": "name",
+    "end": null
+  },
+  "BAL12": {
+    "park_id": "BAL12",
+    "name": "Oriole Park at Camden Yards",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "name",
+    "end": null
+  },
+  "BOS07": {
+    "park_id": "BOS07",
+    "name": "Fenway Park",
+    "city": "Boston",
+    "state": "MA",
+    "lat": 42.3464614,
+    "lng": -71.0970999,
+    "method": "name",
+    "end": null
+  },
+  "BUF05": {
+    "park_id": "BUF05",
+    "name": "Sahlen Field",
+    "city": "Buffalo",
+    "state": "NY",
+    "lat": 42.8804994,
+    "lng": -78.8737899,
+    "method": "name",
+    "end": null
+  },
+  "CHI11": {
+    "park_id": "CHI11",
+    "name": "Wrigley Field",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.9481846,
+    "lng": -87.655559,
+    "method": "name",
+    "end": null
+  },
+  "CHI12": {
+    "park_id": "CHI12",
+    "name": "Guaranteed Rate Field;U.S. Cellular Field",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city",
+    "end": null
+  },
+  "CIN09": {
+    "park_id": "CIN09",
+    "name": "Great American Ballpark",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city",
+    "end": null
+  },
+  "CLE08": {
+    "park_id": "CLE08",
+    "name": "Progressive Field",
+    "city": "Cleveland",
+    "state": "OH",
+    "lat": 41.4960906,
+    "lng": -81.6851319,
+    "method": "name",
+    "end": null
+  },
+  "DEN02": {
+    "park_id": "DEN02",
+    "name": "Coors Field",
+    "city": "Denver",
+    "state": "CO",
+    "lat": 39.7560314,
+    "lng": -104.9929286,
+    "method": "name",
+    "end": null
+  },
+  "DET05": {
+    "park_id": "DET05",
+    "name": "Comerica Park",
+    "city": "Detroit",
+    "state": "MI",
+    "lat": 42.3392219,
+    "lng": -83.0488632,
+    "method": "name",
+    "end": null
+  },
+  "DYE01": {
+    "park_id": "DYE01",
+    "name": "Field of Dreams",
+    "city": "Dyersville",
+    "state": "IA",
+    "lat": 42.4952321,
+    "lng": -91.0549035,
+    "method": "name",
+    "end": null
+  },
+  "HOU03": {
+    "park_id": "HOU03",
+    "name": "Minute Maid Park",
+    "city": "Houston",
+    "state": "TX",
+    "lat": 29.7572321,
+    "lng": -95.3552344,
+    "method": "name",
+    "end": null
+  },
+  "KAN06": {
+    "park_id": "KAN06",
+    "name": "Kauffman Stadium",
+    "city": "Kansas City",
+    "state": "MO",
+    "lat": 39.0515081,
+    "lng": -94.4804598,
+    "method": "name",
+    "end": null
+  },
+  "LOS03": {
+    "park_id": "LOS03",
+    "name": "Dodger Stadium",
+    "city": "Los Angeles",
+    "state": "CA",
+    "lat": 34.0736255,
+    "lng": -118.2398452,
+    "method": "name",
+    "end": null
+  },
+  "MIA02": {
+    "park_id": "MIA02",
+    "name": "Marlins Park",
+    "city": "Miami",
+    "state": "FL",
+    "lat": 25.7780733,
+    "lng": -80.219554,
+    "method": "name",
+    "end": null
+  },
+  "MIL06": {
+    "park_id": "MIL06",
+    "name": "Miller Park",
+    "city": "Milwaukee",
+    "state": "WI",
+    "lat": 43.0280619,
+    "lng": -87.9712694,
+    "method": "name",
+    "end": null
+  },
+  "MIN04": {
+    "park_id": "MIN04",
+    "name": "Target Field",
+    "city": "Minneapolis",
+    "state": "MN",
+    "lat": 44.9816845,
+    "lng": -93.2778643,
+    "method": "name",
+    "end": null
+  },
+  "NYC20": {
+    "park_id": "NYC20",
+    "name": "Citi Field",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7572778,
+    "lng": -73.8458788,
+    "method": "name",
+    "end": null
+  },
+  "NYC21": {
+    "park_id": "NYC21",
+    "name": "Yankee Stadium II",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city",
+    "end": null
+  },
+  "OAK01": {
+    "park_id": "OAK01",
+    "name": "Oakland-Alameda County Coliseum",
+    "city": "Oakland",
+    "state": "CA",
+    "lat": 37.7516333,
+    "lng": -122.2004749,
+    "method": "name",
+    "end": null
+  },
+  "PHI13": {
+    "park_id": "PHI13",
+    "name": "Citizens Bank Park",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "name",
+    "end": null
+  },
+  "PHO01": {
+    "park_id": "PHO01",
+    "name": "Chase Field",
+    "city": "Phoenix",
+    "state": "AZ",
+    "lat": 33.4454856,
+    "lng": -112.0666928,
+    "method": "name",
+    "end": null
+  },
+  "PIT08": {
+    "park_id": "PIT08",
+    "name": "PNC Park",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "lat": 40.4469258,
+    "lng": -80.0056063,
+    "method": "name",
+    "end": null
+  },
+  "SAN02": {
+    "park_id": "SAN02",
+    "name": "PETCO Park",
+    "city": "San Diego",
+    "state": "CA",
+    "lat": 32.7071874,
+    "lng": -117.156913,
+    "method": "name",
+    "end": null
+  },
+  "SEA03": {
+    "park_id": "SEA03",
+    "name": "Safeco Field",
+    "city": "Seattle",
+    "state": "WA",
+    "lat": 47.5913974,
+    "lng": -122.332507,
+    "method": "name",
+    "end": null
+  },
+  "SFO03": {
+    "park_id": "SFO03",
+    "name": "AT&T Park",
+    "city": "San Francisco",
+    "state": "CA",
+    "lat": 37.7811362,
+    "lng": -122.457083,
+    "method": "name",
+    "end": null
+  },
+  "STL10": {
+    "park_id": "STL10",
+    "name": "Busch Stadium III",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city",
+    "end": null
+  },
+  "STP01": {
+    "park_id": "STP01",
+    "name": "Tropicana Field",
+    "city": "St. Petersburg",
+    "state": "FL",
+    "lat": 27.7680559,
+    "lng": -82.6532755,
+    "method": "name",
+    "end": null
+  },
+  "TOR02": {
+    "park_id": "TOR02",
+    "name": "Rogers Centre",
+    "city": "Toronto",
+    "state": "ONT",
+    "lat": 43.6416599,
+    "lng": -79.3891976,
+    "method": "name",
+    "end": null
+  },
+  "WAS11": {
+    "park_id": "WAS11",
+    "name": "Nationals Park",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "name",
+    "end": null
+  },
+  "ALB01": {
+    "park_id": "ALB01",
+    "name": "Riverside Park",
+    "city": "Albany",
+    "state": "NY",
+    "lat": 42.6511674,
+    "lng": -73.754968,
+    "method": "city",
+    "end": "05/30/1882"
+  },
+  "ALT01": {
+    "park_id": "ALT01",
+    "name": "Columbia Park",
+    "city": "Altoona",
+    "state": "PA",
+    "lat": 40.5193586,
+    "lng": -78.3968299,
+    "method": "city",
+    "end": "05/31/1884"
+  },
+  "ARL01": {
+    "park_id": "ARL01",
+    "name": "Arlington Stadium",
+    "city": "Arlington",
+    "state": "TX",
+    "lat": 32.7355816,
+    "lng": -97.1071186,
+    "method": "city-cache",
+    "end": "10/03/1993"
+  },
+  "ARL02": {
+    "park_id": "ARL02",
+    "name": "Rangers Ballpark in Arlington",
+    "city": "Arlington",
+    "state": "TX",
+    "lat": 32.7355816,
+    "lng": -97.1071186,
+    "method": "city-cache",
+    "end": "09/29/2019"
+  },
+  "ATL01": {
+    "park_id": "ATL01",
+    "name": "Atlanta-Fulton County Stadium",
+    "city": "Atlanta",
+    "state": "GA",
+    "lat": 33.890738,
+    "lng": -84.4676163,
+    "method": "city-cache",
+    "end": "09/23/1996"
+  },
+  "ATL02": {
+    "park_id": "ATL02",
+    "name": "Turner Field",
+    "city": "Atlanta",
+    "state": "GA",
+    "lat": 33.890738,
+    "lng": -84.4676163,
+    "method": "city-cache",
+    "end": "10/02/2016"
+  },
+  "BAL01": {
+    "park_id": "BAL01",
+    "name": "Madison Avenue Grounds",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "07/08/1871"
+  },
+  "BAL02": {
+    "park_id": "BAL02",
+    "name": "Newington Park",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "09/30/1882"
+  },
+  "BAL03": {
+    "park_id": "BAL03",
+    "name": "Oriole Park I",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "10/10/1889"
+  },
+  "BAL04": {
+    "park_id": "BAL04",
+    "name": "Belair Lot",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "09/24/1884"
+  },
+  "BAL05": {
+    "park_id": "BAL05",
+    "name": "Monumental Park",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "08/25/1884"
+  },
+  "BAL06": {
+    "park_id": "BAL06",
+    "name": "Oriole Park II",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "05/09/1891"
+  },
+  "BAL07": {
+    "park_id": "BAL07",
+    "name": "Oriole Park III",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "10/10/1899"
+  },
+  "BAL09": {
+    "park_id": "BAL09",
+    "name": "Oriole Park IV",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "09/29/1902"
+  },
+  "BAL10": {
+    "park_id": "BAL10",
+    "name": "Terrapin Park",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "10/02/1915"
+  },
+  "BAL11": {
+    "park_id": "BAL11",
+    "name": "Memorial Stadium",
+    "city": "Baltimore",
+    "state": "MD",
+    "lat": 39.2837383,
+    "lng": -76.6216056,
+    "method": "city-cache",
+    "end": "09/30/1991"
+  },
+  "BOS01": {
+    "park_id": "BOS01",
+    "name": "South End Grounds I",
+    "city": "Boston",
+    "state": "MA",
+    "lat": 42.3464614,
+    "lng": -71.0970999,
+    "method": "city-cache",
+    "end": "09/10/1887"
+  },
+  "BOS02": {
+    "park_id": "BOS02",
+    "name": "Dartmouth Grounds",
+    "city": "Boston",
+    "state": "MA",
+    "lat": 42.3464614,
+    "lng": -71.0970999,
+    "method": "city-cache",
+    "end": "09/24/1884"
+  },
+  "BOS03": {
+    "park_id": "BOS03",
+    "name": "South End Grounds II",
+    "city": "Boston",
+    "state": "MA",
+    "lat": 42.3464614,
+    "lng": -71.0970999,
+    "method": "city-cache",
+    "end": "05/15/1894"
+  },
+  "BOS04": {
+    "park_id": "BOS04",
+    "name": "Congress Street Grounds",
+    "city": "Boston",
+    "state": "MA",
+    "lat": 42.3464614,
+    "lng": -71.0970999,
+    "method": "city-cache",
+    "end": "06/20/1894"
+  },
+  "BOS05": {
+    "park_id": "BOS05",
+    "name": "South End Grounds III",
+    "city": "Boston",
+    "state": "MA",
+    "lat": 42.3464614,
+    "lng": -71.0970999,
+    "method": "city-cache",
+    "end": "08/11/1914"
+  },
+  "BOS06": {
+    "park_id": "BOS06",
+    "name": "Huntington Avenue Baseball Grounds",
+    "city": "Boston",
+    "state": "MA",
+    "lat": 42.3464614,
+    "lng": -71.0970999,
+    "method": "city-cache",
+    "end": "10/07/1911"
+  },
+  "BOS08": {
+    "park_id": "BOS08",
+    "name": "Braves Field",
+    "city": "Boston",
+    "state": "MA",
+    "lat": 42.3464614,
+    "lng": -71.0970999,
+    "method": "city-cache",
+    "end": "09/21/1952"
+  },
+  "BUF01": {
+    "park_id": "BUF01",
+    "name": "Riverside Grounds",
+    "city": "Buffalo",
+    "state": "NY",
+    "lat": 42.8804994,
+    "lng": -78.8737899,
+    "method": "city-cache",
+    "end": "09/08/1883"
+  },
+  "BUF02": {
+    "park_id": "BUF02",
+    "name": "Olympic Park I",
+    "city": "Buffalo",
+    "state": "NY",
+    "lat": 42.8804994,
+    "lng": -78.8737899,
+    "method": "city-cache",
+    "end": "10/07/1885"
+  },
+  "BUF03": {
+    "park_id": "BUF03",
+    "name": "Olympic Park II",
+    "city": "Buffalo",
+    "state": "NY",
+    "lat": 42.8804994,
+    "lng": -78.8737899,
+    "method": "city-cache",
+    "end": "10/04/1890"
+  },
+  "BUF04": {
+    "park_id": "BUF04",
+    "name": "International Fair Association Grounds",
+    "city": "Buffalo",
+    "state": "NY",
+    "lat": 42.8804994,
+    "lng": -78.8737899,
+    "method": "city-cache",
+    "end": "09/29/1915"
+  },
+  "CAN01": {
+    "park_id": "CAN01",
+    "name": "Mahaffey Park",
+    "city": "Canton",
+    "state": "OH",
+    "lat": 40.7985464,
+    "lng": -81.3749508,
+    "method": "city",
+    "end": "06/21/1903"
+  },
+  "CAN02": {
+    "park_id": "CAN02",
+    "name": "Pastime Park",
+    "city": "Canton",
+    "state": "OH",
+    "lat": 40.7985464,
+    "lng": -81.3749508,
+    "method": "city-cache",
+    "end": "09/18/1890"
+  },
+  "CHI01": {
+    "park_id": "CHI01",
+    "name": "Lake Front Park I",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "09/29/1871"
+  },
+  "CHI02": {
+    "park_id": "CHI02",
+    "name": "23rd Street Park",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "10/06/1877"
+  },
+  "CHI03": {
+    "park_id": "CHI03",
+    "name": "Lake Front Park II",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "09/30/1882"
+  },
+  "CHI04": {
+    "park_id": "CHI04",
+    "name": "Lake Front Park III",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "10/11/1884"
+  },
+  "CHI05": {
+    "park_id": "CHI05",
+    "name": "South Side Park I",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "08/01/1884"
+  },
+  "CHI06": {
+    "park_id": "CHI06",
+    "name": "West Side Park",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "10/03/1891"
+  },
+  "CHI07": {
+    "park_id": "CHI07",
+    "name": "South Side Park II",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "09/27/1893"
+  },
+  "CHI08": {
+    "park_id": "CHI08",
+    "name": "West Side Grounds",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "10/03/1915"
+  },
+  "CHI09": {
+    "park_id": "CHI09",
+    "name": "South Side Park III",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "06/27/1910"
+  },
+  "CHI10": {
+    "park_id": "CHI10",
+    "name": "Comiskey Park I",
+    "city": "Chicago",
+    "state": "IL",
+    "lat": 41.8755616,
+    "lng": -87.6244212,
+    "method": "city-cache",
+    "end": "09/30/1990"
+  },
+  "CIN01": {
+    "park_id": "CIN01",
+    "name": "Lincoln Park Grounds",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city-cache",
+    "end": "07/22/1871"
+  },
+  "CIN02": {
+    "park_id": "CIN02",
+    "name": "Avenue Grounds",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city-cache",
+    "end": "08/27/1879"
+  },
+  "CIN03": {
+    "park_id": "CIN03",
+    "name": "Bank Street Grounds",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city-cache",
+    "end": "10/15/1884"
+  },
+  "CIN04": {
+    "park_id": "CIN04",
+    "name": "League Park I",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city-cache",
+    "end": "09/29/1893"
+  },
+  "CIN05": {
+    "park_id": "CIN05",
+    "name": "League Park II",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city-cache",
+    "end": "10/02/1901"
+  },
+  "CIN06": {
+    "park_id": "CIN06",
+    "name": "Palace of the Fans",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city-cache",
+    "end": "10/06/1911"
+  },
+  "CIN07": {
+    "park_id": "CIN07",
+    "name": "Crosley Field",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city-cache",
+    "end": "06/24/1970"
+  },
+  "CIN08": {
+    "park_id": "CIN08",
+    "name": "Cinergy Field",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city-cache",
+    "end": "09/22/2002"
+  },
+  "CLE01": {
+    "park_id": "CLE01",
+    "name": "National Association Grounds",
+    "city": "Cleveland",
+    "state": "OH",
+    "lat": 41.4960906,
+    "lng": -81.6851319,
+    "method": "city-cache",
+    "end": "08/19/1872"
+  },
+  "CLE02": {
+    "park_id": "CLE02",
+    "name": "League Park I",
+    "city": "Cleveland",
+    "state": "OH",
+    "lat": 41.4960906,
+    "lng": -81.6851319,
+    "method": "city-cache",
+    "end": "10/11/1884"
+  },
+  "CLE03": {
+    "park_id": "CLE03",
+    "name": "League Park II",
+    "city": "Cleveland",
+    "state": "OH",
+    "lat": 41.4960906,
+    "lng": -81.6851319,
+    "method": "city-cache",
+    "end": "10/04/1890"
+  },
+  "CLE04": {
+    "park_id": "CLE04",
+    "name": "Brotherhood Park",
+    "city": "Cleveland",
+    "state": "OH",
+    "lat": 41.4960906,
+    "lng": -81.6851319,
+    "method": "city-cache",
+    "end": "10/04/1890"
+  },
+  "CLE05": {
+    "park_id": "CLE05",
+    "name": "League Park III",
+    "city": "Cleveland",
+    "state": "OH",
+    "lat": 41.4960906,
+    "lng": -81.6851319,
+    "method": "city-cache",
+    "end": "09/06/1909"
+  },
+  "CLE06": {
+    "park_id": "CLE06",
+    "name": "League Park IV",
+    "city": "Cleveland",
+    "state": "OH",
+    "lat": 41.4960906,
+    "lng": -81.6851319,
+    "method": "city-cache",
+    "end": "09/21/1946"
+  },
+  "CLE07": {
+    "park_id": "CLE07",
+    "name": "Cleveland Stadium",
+    "city": "Cleveland",
+    "state": "OH",
+    "lat": 41.4960906,
+    "lng": -81.6851319,
+    "method": "city-cache",
+    "end": "10/03/1993"
+  },
+  "CLE09": {
+    "park_id": "CLE09",
+    "name": "Cedar Avenue Driving Park",
+    "city": "Cleveland",
+    "state": "OH",
+    "lat": 41.4960906,
+    "lng": -81.6851319,
+    "method": "city-cache",
+    "end": "08/21/1887"
+  },
+  "CLL01": {
+    "park_id": "CLL01",
+    "name": "Euclid Beach Park",
+    "city": "Collinwood",
+    "state": "OH",
+    "lat": 41.5764072,
+    "lng": -81.5646736,
+    "method": "city",
+    "end": "06/19/1898"
+  },
+  "COL01": {
+    "park_id": "COL01",
+    "name": "Recreation Park I",
+    "city": "Columbus",
+    "state": "OH",
+    "lat": 39.9622601,
+    "lng": -83.0007065,
+    "method": "city",
+    "end": "09/22/1884"
+  },
+  "COL02": {
+    "park_id": "COL02",
+    "name": "Recreation Park II",
+    "city": "Columbus",
+    "state": "OH",
+    "lat": 39.9622601,
+    "lng": -83.0007065,
+    "method": "city-cache",
+    "end": "09/22/1891"
+  },
+  "COL03": {
+    "park_id": "COL03",
+    "name": "Neil Park I",
+    "city": "Columbus",
+    "state": "OH",
+    "lat": 39.9622601,
+    "lng": -83.0007065,
+    "method": "city-cache",
+    "end": "05/17/1903"
+  },
+  "COL04": {
+    "park_id": "COL04",
+    "name": "Neil Park II",
+    "city": "Columbus",
+    "state": "OH",
+    "lat": 39.9622601,
+    "lng": -83.0007065,
+    "method": "city-cache",
+    "end": "07/24/1905"
+  },
+  "COV01": {
+    "park_id": "COV01",
+    "name": "Star Baseball Park",
+    "city": "Covington",
+    "state": "KY",
+    "lat": 39.0831712,
+    "lng": -84.5107548,
+    "method": "city",
+    "end": "09/21/1875"
+  },
+  "DAY01": {
+    "park_id": "DAY01",
+    "name": "Fairview Park",
+    "city": "Dayton",
+    "state": "OH",
+    "lat": 39.7589478,
+    "lng": -84.1916069,
+    "method": "city",
+    "end": "06/08/1902"
+  },
+  "DEN01": {
+    "park_id": "DEN01",
+    "name": "Mile High Stadium",
+    "city": "Denver",
+    "state": "CO",
+    "lat": 39.7560314,
+    "lng": -104.9929286,
+    "method": "city-cache",
+    "end": "08/11/1994"
+  },
+  "DET01": {
+    "park_id": "DET01",
+    "name": "Recreation Park",
+    "city": "Detroit",
+    "state": "MI",
+    "lat": 42.3392219,
+    "lng": -83.0488632,
+    "method": "city-cache",
+    "end": "09/22/1888"
+  },
+  "DET02": {
+    "park_id": "DET02",
+    "name": "Bennett Park",
+    "city": "Detroit",
+    "state": "MI",
+    "lat": 42.3392219,
+    "lng": -83.0488632,
+    "method": "city-cache",
+    "end": "09/10/1911"
+  },
+  "DET03": {
+    "park_id": "DET03",
+    "name": "Burns Park",
+    "city": "Detroit",
+    "state": "MI",
+    "lat": 42.3392219,
+    "lng": -83.0488632,
+    "method": "city-cache",
+    "end": "09/07/1902"
+  },
+  "DET04": {
+    "park_id": "DET04",
+    "name": "Tiger Stadium",
+    "city": "Detroit",
+    "state": "MI",
+    "lat": 42.3392219,
+    "lng": -83.0488632,
+    "method": "city-cache",
+    "end": "09/27/1999"
+  },
+  "DOV01": {
+    "park_id": "DOV01",
+    "name": "Fairview Park Fair Grounds",
+    "city": "Dover",
+    "state": "DE",
+    "lat": 39.158168,
+    "lng": -75.5243682,
+    "method": "city",
+    "end": "06/24/1875"
+  },
+  "DUN01": {
+    "park_id": "DUN01",
+    "name": "TD Ballpark",
+    "city": "Dunedin",
+    "state": "FL",
+    "lat": 28.0116627,
+    "lng": -82.7893788,
+    "method": "city",
+    "end": "05/24/2021"
+  },
+  "ELM01": {
+    "park_id": "ELM01",
+    "name": "Maple Avenue Driving Park",
+    "city": "Elmira",
+    "state": "NY",
+    "lat": 42.0897965,
+    "lng": -76.8077338,
+    "method": "city",
+    "end": "10/10/1885"
+  },
+  "FOR01": {
+    "park_id": "FOR01",
+    "name": "Grand Duchess",
+    "city": "Fort Wayne",
+    "state": "IN",
+    "lat": 41.0799898,
+    "lng": -85.1386015,
+    "method": "city",
+    "end": "08/29/1871"
+  },
+  "FOR02": {
+    "park_id": "FOR02",
+    "name": "Swinney Park",
+    "city": "Fort Wayne",
+    "state": "IN",
+    "lat": 41.0799898,
+    "lng": -85.1386015,
+    "method": "city-cache",
+    "end": "10/24/1882"
+  },
+  "FOR03": {
+    "park_id": "FOR03",
+    "name": "Jailhouse Flats",
+    "city": "Fort Wayne",
+    "state": "IN",
+    "lat": 41.0799898,
+    "lng": -85.1386015,
+    "method": "city-cache",
+    "end": "08/31/1902"
+  },
+  "FTB01": {
+    "park_id": "FTB01",
+    "name": "Fort Bragg Field",
+    "city": "Fort Bragg",
+    "state": "NC",
+    "lat": 35.140311,
+    "lng": -79.1541465,
+    "method": "city",
+    "end": "07/03/2016"
+  },
+  "GEA01": {
+    "park_id": "GEA01",
+    "name": "Geauga Lake Grounds",
+    "city": "Geauga Lake",
+    "state": "OH",
+    "lat": 41.3492595,
+    "lng": -81.3734432,
+    "method": "city",
+    "end": "09/02/1888"
+  },
+  "GLO01": {
+    "park_id": "GLO01",
+    "name": "Gloucester Point Grounds",
+    "city": "Gloucester City",
+    "state": "NJ",
+    "lat": 39.8918622,
+    "lng": -75.1161897,
+    "method": "city",
+    "end": "10/12/1890"
+  },
+  "GLO02": {
+    "park_id": "GLO02",
+    "name": "Gloucester Fireworks Park",
+    "city": "Gloucester City",
+    "state": "NJ",
+    "lat": 39.8918622,
+    "lng": -75.1161897,
+    "method": "city-cache",
+    "end": "08/26/1888"
+  },
+  "GRA01": {
+    "park_id": "GRA01",
+    "name": "Ramona Park",
+    "city": "Grand Rapids",
+    "state": "MI",
+    "lat": 42.9632425,
+    "lng": -85.6678639,
+    "method": "city",
+    "end": "05/24/1903"
+  },
+  "HAR01": {
+    "park_id": "HAR01",
+    "name": "Harrison Field",
+    "city": "Harrison",
+    "state": "NJ",
+    "lat": 40.7464901,
+    "lng": -74.1562551,
+    "method": "city",
+    "end": "10/03/1915"
+  },
+  "HON01": {
+    "park_id": "HON01",
+    "name": "Aloha Stadium",
+    "city": "Honolulu",
+    "state": "HI",
+    "lat": 21.304547,
+    "lng": -157.855676,
+    "method": "city",
+    "end": "04/20/1997"
+  },
+  "HOU01": {
+    "park_id": "HOU01",
+    "name": "Colt Stadium",
+    "city": "Houston",
+    "state": "TX",
+    "lat": 29.7572321,
+    "lng": -95.3552344,
+    "method": "city-cache",
+    "end": "09/27/1964"
+  },
+  "HOU02": {
+    "park_id": "HOU02",
+    "name": "Astrodome",
+    "city": "Houston",
+    "state": "TX",
+    "lat": 29.7572321,
+    "lng": -95.3552344,
+    "method": "city-cache",
+    "end": "10/03/1999"
+  },
+  "HRT01": {
+    "park_id": "HRT01",
+    "name": "Hartford Ball Club Grounds",
+    "city": "Hartford",
+    "state": "CT",
+    "lat": 41.764582,
+    "lng": -72.6908547,
+    "method": "city",
+    "end": "09/30/1876"
+  },
+  "HRT02": {
+    "park_id": "HRT02",
+    "name": "Hartford Trotting Park",
+    "city": "Hartford",
+    "state": "CT",
+    "lat": 41.764582,
+    "lng": -72.6908547,
+    "method": "city-cache",
+    "end": "08/09/1872"
+  },
+  "IND01": {
+    "park_id": "IND01",
+    "name": "South Street Park",
+    "city": "Indianapolis",
+    "state": "IN",
+    "lat": 39.7683331,
+    "lng": -86.1583502,
+    "method": "city",
+    "end": "09/14/1878"
+  },
+  "IND02": {
+    "park_id": "IND02",
+    "name": "Seventh Street Park I",
+    "city": "Indianapolis",
+    "state": "IN",
+    "lat": 39.7683331,
+    "lng": -86.1583502,
+    "method": "city-cache",
+    "end": "09/20/1884"
+  },
+  "IND03": {
+    "park_id": "IND03",
+    "name": "Bruce Grounds",
+    "city": "Indianapolis",
+    "state": "IN",
+    "lat": 39.7683331,
+    "lng": -86.1583502,
+    "method": "city-cache",
+    "end": "09/21/1884"
+  },
+  "IND04": {
+    "park_id": "IND04",
+    "name": "Seventh Street Park II",
+    "city": "Indianapolis",
+    "state": "IN",
+    "lat": 39.7683331,
+    "lng": -86.1583502,
+    "method": "city-cache",
+    "end": "10/08/1887"
+  },
+  "IND05": {
+    "park_id": "IND05",
+    "name": "Seventh Street Park III",
+    "city": "Indianapolis",
+    "state": "IN",
+    "lat": 39.7683331,
+    "lng": -86.1583502,
+    "method": "city-cache",
+    "end": "10/05/1889"
+  },
+  "IND06": {
+    "park_id": "IND06",
+    "name": "Indianapolis Park",
+    "city": "Indianapolis",
+    "state": "IN",
+    "lat": 39.7683331,
+    "lng": -86.1583502,
+    "method": "city-cache",
+    "end": "08/02/1890"
+  },
+  "IND07": {
+    "park_id": "IND07",
+    "name": "Federal League Park",
+    "city": "Indianapolis",
+    "state": "IN",
+    "lat": 39.7683331,
+    "lng": -86.1583502,
+    "method": "city-cache",
+    "end": "10/08/1914"
+  },
+  "IRO01": {
+    "park_id": "IRO01",
+    "name": "Windsor Beach",
+    "city": "Irondequoit",
+    "state": "NY",
+    "lat": 43.2133955,
+    "lng": -77.5797226,
+    "method": "city",
+    "end": "07/20/1890"
+  },
+  "JER01": {
+    "park_id": "JER01",
+    "name": "Oakdale Park",
+    "city": "Jersey City",
+    "state": "NJ",
+    "lat": 40.7215682,
+    "lng": -74.047455,
+    "method": "city",
+    "end": "04/25/1889"
+  },
+  "JER02": {
+    "park_id": "JER02",
+    "name": "Roosevelt Stadium",
+    "city": "Jersey City",
+    "state": "NJ",
+    "lat": 40.7215682,
+    "lng": -74.047455,
+    "method": "city-cache",
+    "end": "09/03/1957"
+  },
+  "KAN01": {
+    "park_id": "KAN01",
+    "name": "Athletic Park",
+    "city": "Kansas City",
+    "state": "MO",
+    "lat": 39.0515081,
+    "lng": -94.4804598,
+    "method": "city-cache",
+    "end": "10/19/1884"
+  },
+  "KAN02": {
+    "park_id": "KAN02",
+    "name": "Association Park",
+    "city": "Kansas City",
+    "state": "MO",
+    "lat": 39.0515081,
+    "lng": -94.4804598,
+    "method": "city-cache",
+    "end": "10/15/1892"
+  },
+  "KAN03": {
+    "park_id": "KAN03",
+    "name": "Exposition Park",
+    "city": "Kansas City",
+    "state": "MO",
+    "lat": 39.0515081,
+    "lng": -94.4804598,
+    "method": "city-cache",
+    "end": "09/30/1889"
+  },
+  "KAN04": {
+    "park_id": "KAN04",
+    "name": "Gordon and Koppel Field",
+    "city": "Kansas City",
+    "state": "MO",
+    "lat": 39.0515081,
+    "lng": -94.4804598,
+    "method": "city-cache",
+    "end": "09/28/1915"
+  },
+  "KAN05": {
+    "park_id": "KAN05",
+    "name": "Municipal Stadium",
+    "city": "Kansas City",
+    "state": "MO",
+    "lat": 39.0515081,
+    "lng": -94.4804598,
+    "method": "city-cache",
+    "end": "10/04/1972"
+  },
+  "KEO01": {
+    "park_id": "KEO01",
+    "name": "Perry Park",
+    "city": "Keokuk",
+    "state": "IA",
+    "lat": 41.3154792,
+    "lng": -92.1867128,
+    "method": "city",
+    "end": "06/14/1875"
+  },
+  "LAS01": {
+    "park_id": "LAS01",
+    "name": "Cashman Field",
+    "city": "Las Vegas",
+    "state": "NV",
+    "lat": 36.1674263,
+    "lng": -115.1484131,
+    "method": "city",
+    "end": "04/07/1996"
+  },
+  "LBV01": {
+    "park_id": "LBV01",
+    "name": "The Ballpark at Disney's Wide World",
+    "city": "Lake Buena Vista",
+    "state": "FL",
+    "lat": 28.3716746,
+    "lng": -81.5239625,
+    "method": "city",
+    "end": "04/24/2008"
+  },
+  "LON01": {
+    "park_id": "LON01",
+    "name": "London Stadium",
+    "city": "London",
+    "state": "England",
+    "lat": 51.5074456,
+    "lng": -0.1277653,
+    "method": "city",
+    "end": "06/30/2019"
+  },
+  "LOS01": {
+    "park_id": "LOS01",
+    "name": "Los Angeles Memorial Coliseum",
+    "city": "Los Angeles",
+    "state": "CA",
+    "lat": 34.0736255,
+    "lng": -118.2398452,
+    "method": "city-cache",
+    "end": "09/20/1961"
+  },
+  "LOS02": {
+    "park_id": "LOS02",
+    "name": "Wrigley Field",
+    "city": "Los Angeles",
+    "state": "CA",
+    "lat": 34.0736255,
+    "lng": -118.2398452,
+    "method": "city-cache",
+    "end": "10/01/1961"
+  },
+  "LOU01": {
+    "park_id": "LOU01",
+    "name": "Louisville Baseball Park",
+    "city": "Louisville",
+    "state": "KY",
+    "lat": 38.2542376,
+    "lng": -85.759407,
+    "method": "city",
+    "end": "09/29/1877"
+  },
+  "LOU02": {
+    "park_id": "LOU02",
+    "name": "Eclipse Park I",
+    "city": "Louisville",
+    "state": "KY",
+    "lat": 38.2542376,
+    "lng": -85.759407,
+    "method": "city-cache",
+    "end": "05/04/1893"
+  },
+  "LOU03": {
+    "park_id": "LOU03",
+    "name": "Eclipse Park II",
+    "city": "Louisville",
+    "state": "KY",
+    "lat": 38.2542376,
+    "lng": -85.759407,
+    "method": "city-cache",
+    "end": "08/02/1899"
+  },
+  "LOU04": {
+    "park_id": "LOU04",
+    "name": "Eclipse Park III",
+    "city": "Louisville",
+    "state": "KY",
+    "lat": 38.2542376,
+    "lng": -85.759407,
+    "method": "city-cache",
+    "end": "09/02/1899"
+  },
+  "LUD01": {
+    "park_id": "LUD01",
+    "name": "Ludlow Baseball Park",
+    "city": "Ludlow",
+    "state": "KY",
+    "lat": 39.0925598,
+    "lng": -84.5474435,
+    "method": "city",
+    "end": "09/22/1875"
+  },
+  "MAS01": {
+    "park_id": "MAS01",
+    "name": "Long Island Grounds",
+    "city": "Maspeth",
+    "state": "NY",
+    "lat": 40.723158,
+    "lng": -73.912637,
+    "method": "city",
+    "end": "08/03/1890"
+  },
+  "MIA01": {
+    "park_id": "MIA01",
+    "name": "Sun Life Stadium",
+    "city": "Miami",
+    "state": "FL",
+    "lat": 25.7780733,
+    "lng": -80.219554,
+    "method": "city-cache",
+    "end": "09/28/2011"
+  },
+  "MID01": {
+    "park_id": "MID01",
+    "name": "Mansfield Club Grounds",
+    "city": "Middletown",
+    "state": "CT",
+    "lat": 41.5623178,
+    "lng": -72.6509061,
+    "method": "city",
+    "end": "07/04/1872"
+  },
+  "MIL01": {
+    "park_id": "MIL01",
+    "name": "Milwaukee Base-Ball Grounds",
+    "city": "Milwaukee",
+    "state": "WI",
+    "lat": 43.0280619,
+    "lng": -87.9712694,
+    "method": "city-cache",
+    "end": "09/14/1878"
+  },
+  "MIL02": {
+    "park_id": "MIL02",
+    "name": "Wright Street Grounds",
+    "city": "Milwaukee",
+    "state": "WI",
+    "lat": 43.0280619,
+    "lng": -87.9712694,
+    "method": "city-cache",
+    "end": "09/25/1885"
+  },
+  "MIL03": {
+    "park_id": "MIL03",
+    "name": "Athletic Park",
+    "city": "Milwaukee",
+    "state": "WI",
+    "lat": 43.0280619,
+    "lng": -87.9712694,
+    "method": "city-cache",
+    "end": "10/04/1891"
+  },
+  "MIL04": {
+    "park_id": "MIL04",
+    "name": "Lloyd Street Grounds",
+    "city": "Milwaukee",
+    "state": "WI",
+    "lat": 43.0280619,
+    "lng": -87.9712694,
+    "method": "city-cache",
+    "end": "09/12/1901"
+  },
+  "MIL05": {
+    "park_id": "MIL05",
+    "name": "County Stadium",
+    "city": "Milwaukee",
+    "state": "WI",
+    "lat": 43.0280619,
+    "lng": -87.9712694,
+    "method": "city-cache",
+    "end": "09/28/2000"
+  },
+  "MIN01": {
+    "park_id": "MIN01",
+    "name": "Athletic Park",
+    "city": "Minneapolis",
+    "state": "MN",
+    "lat": 44.9816845,
+    "lng": -93.2778643,
+    "method": "city-cache",
+    "end": "10/02/1891"
+  },
+  "MIN02": {
+    "park_id": "MIN02",
+    "name": "Metropolitan Stadium",
+    "city": "Bloomington",
+    "state": "MN",
+    "lat": 44.8322405,
+    "lng": -93.3204872,
+    "method": "city",
+    "end": "09/30/1981"
+  },
+  "MIN03": {
+    "park_id": "MIN03",
+    "name": "Hubert H. Humphrey Metrodome",
+    "city": "Minneapolis",
+    "state": "MN",
+    "lat": 44.9816845,
+    "lng": -93.2778643,
+    "method": "city-cache",
+    "end": "10/06/2009"
+  },
+  "MNT01": {
+    "park_id": "MNT01",
+    "name": "Estadio Monterrey",
+    "city": "Monterrey",
+    "state": "MX",
+    "lat": 25.6802019,
+    "lng": -100.315258,
+    "method": "city",
+    "end": "04/04/1999"
+  },
+  "MON01": {
+    "park_id": "MON01",
+    "name": "Parc Jarry",
+    "city": "Montreal",
+    "state": "QUE",
+    "lat": 45.5031824,
+    "lng": -73.5698065,
+    "method": "city",
+    "end": "09/29/1976"
+  },
+  "MON02": {
+    "park_id": "MON02",
+    "name": "Stade Olympique",
+    "city": "Montreal",
+    "state": "QUE",
+    "lat": 45.5031824,
+    "lng": -73.5698065,
+    "method": "city-cache",
+    "end": "09/29/2004"
+  },
+  "NEW01": {
+    "park_id": "NEW01",
+    "name": "Howard Avenue Grounds",
+    "city": "New Haven",
+    "state": "CT",
+    "lat": 41.3082138,
+    "lng": -72.9250518,
+    "method": "city",
+    "end": "10/28/1875"
+  },
+  "NEW02": {
+    "park_id": "NEW02",
+    "name": "Hamilton Park",
+    "city": "New Haven",
+    "state": "CT",
+    "lat": 41.3082138,
+    "lng": -72.9250518,
+    "method": "city-cache",
+    "end": "04/21/1875"
+  },
+  "NEW03": {
+    "park_id": "NEW03",
+    "name": "Beyerle's Park",
+    "city": "Newburgh Township",
+    "state": "OH",
+    "lat": null,
+    "lng": null,
+    "method": "failed",
+    "end": "08/26/1888"
+  },
+  "NWK01": {
+    "park_id": "NWK01",
+    "name": "Wiedenmeyer's Park",
+    "city": "Newark",
+    "state": "NJ",
+    "lat": 40.735657,
+    "lng": -74.1723667,
+    "method": "city",
+    "end": "07/17/1904"
+  },
+  "NYC01": {
+    "park_id": "NYC01",
+    "name": "Union Grounds",
+    "city": "Brooklyn",
+    "state": "NY",
+    "lat": 40.6526006,
+    "lng": -73.9497211,
+    "method": "city",
+    "end": "09/21/1877"
+  },
+  "NYC02": {
+    "park_id": "NYC02",
+    "name": "Capitoline Grounds",
+    "city": "Brooklyn",
+    "state": "NY",
+    "lat": 40.6526006,
+    "lng": -73.9497211,
+    "method": "city-cache",
+    "end": "10/09/1872"
+  },
+  "NYC03": {
+    "park_id": "NYC03",
+    "name": "Polo Grounds I (Southeast Diamond)",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "10/13/1888"
+  },
+  "NYC04": {
+    "park_id": "NYC04",
+    "name": "Polo Grounds II (Southwest Diamond)",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "10/25/1883"
+  },
+  "NYC05": {
+    "park_id": "NYC05",
+    "name": "Washington Park I",
+    "city": "Brooklyn",
+    "state": "NY",
+    "lat": 40.6526006,
+    "lng": -73.9497211,
+    "method": "city-cache",
+    "end": "05/04/1889"
+  },
+  "NYC06": {
+    "park_id": "NYC06",
+    "name": "Metropolitan Park",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "08/23/1884"
+  },
+  "NYC07": {
+    "park_id": "NYC07",
+    "name": "Grauer's Ridgewood Park",
+    "city": "Queens",
+    "state": "NY",
+    "lat": 40.7135078,
+    "lng": -73.8283132,
+    "method": "city",
+    "end": "09/19/1886"
+  },
+  "NYC08": {
+    "park_id": "NYC08",
+    "name": "Washington Park II",
+    "city": "Brooklyn",
+    "state": "NY",
+    "lat": 40.6526006,
+    "lng": -73.9497211,
+    "method": "city-cache",
+    "end": "10/03/1890"
+  },
+  "NYC09": {
+    "park_id": "NYC09",
+    "name": "Polo Grounds III",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "09/13/1890"
+  },
+  "NYC10": {
+    "park_id": "NYC10",
+    "name": "Polo Grounds IV",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "04/13/1911"
+  },
+  "NYC11": {
+    "park_id": "NYC11",
+    "name": "Eastern Park",
+    "city": "Brooklyn",
+    "state": "NY",
+    "lat": 40.6526006,
+    "lng": -73.9497211,
+    "method": "city-cache",
+    "end": "10/02/1897"
+  },
+  "NYC12": {
+    "park_id": "NYC12",
+    "name": "Washington Park III",
+    "city": "Brooklyn",
+    "state": "NY",
+    "lat": 40.6526006,
+    "lng": -73.9497211,
+    "method": "city-cache",
+    "end": "11/01/1912"
+  },
+  "NYC13": {
+    "park_id": "NYC13",
+    "name": "Hilltop Park",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "10/05/1912"
+  },
+  "NYC14": {
+    "park_id": "NYC14",
+    "name": "Polo Grounds V",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "09/18/1963"
+  },
+  "NYC15": {
+    "park_id": "NYC15",
+    "name": "Ebbets Field",
+    "city": "Brooklyn",
+    "state": "NY",
+    "lat": 40.6526006,
+    "lng": -73.9497211,
+    "method": "city-cache",
+    "end": "09/24/1957"
+  },
+  "NYC16": {
+    "park_id": "NYC16",
+    "name": "Yankee Stadium I",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "09/21/2008"
+  },
+  "NYC17": {
+    "park_id": "NYC17",
+    "name": "Shea Stadium",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "09/28/2008"
+  },
+  "NYC18": {
+    "park_id": "NYC18",
+    "name": "Wallace's Ridgewood Park",
+    "city": "Queens",
+    "state": "NY",
+    "lat": 40.7135078,
+    "lng": -73.8283132,
+    "method": "city-cache",
+    "end": "06/08/1890"
+  },
+  "NYC19": {
+    "park_id": "NYC19",
+    "name": "Washington Park IV",
+    "city": "Brooklyn",
+    "state": "NY",
+    "lat": 40.6526006,
+    "lng": -73.9497211,
+    "method": "city-cache",
+    "end": "11/01/1915"
+  },
+  "OMA01": {
+    "park_id": "OMA01",
+    "name": "TD Ameritrade Park",
+    "city": "Omaha",
+    "state": "NE",
+    "lat": 41.2587459,
+    "lng": -95.9383758,
+    "method": "city",
+    "end": "06/13/2019"
+  },
+  "PEN01": {
+    "park_id": "PEN01",
+    "name": "East End Park",
+    "city": "Cincinnati",
+    "state": "OH",
+    "lat": 39.1014537,
+    "lng": -84.5124602,
+    "method": "city-cache",
+    "end": "08/13/1891"
+  },
+  "PHI01": {
+    "park_id": "PHI01",
+    "name": "Jefferson Street Grounds",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "10/11/1890"
+  },
+  "PHI02": {
+    "park_id": "PHI02",
+    "name": "Centennial Park",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "05/24/1875"
+  },
+  "PHI03": {
+    "park_id": "PHI03",
+    "name": "Oakdale Park",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "09/21/1882"
+  },
+  "PHI04": {
+    "park_id": "PHI04",
+    "name": "Recreation Park",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "10/09/1886"
+  },
+  "PHI05": {
+    "park_id": "PHI05",
+    "name": "Keystone Park",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "08/07/1884"
+  },
+  "PHI06": {
+    "park_id": "PHI06",
+    "name": "Huntingdon Grounds I",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "08/06/1894"
+  },
+  "PHI07": {
+    "park_id": "PHI07",
+    "name": "Forepaugh Park",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "10/05/1891"
+  },
+  "PHI08": {
+    "park_id": "PHI08",
+    "name": "University of Penn. Athletic Field",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "08/17/1894"
+  },
+  "PHI09": {
+    "park_id": "PHI09",
+    "name": "Baker Bowl",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "06/30/1938"
+  },
+  "PHI10": {
+    "park_id": "PHI10",
+    "name": "Columbia Park",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "10/03/1908"
+  },
+  "PHI11": {
+    "park_id": "PHI11",
+    "name": "Shibe Park",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "10/01/1970"
+  },
+  "PHI12": {
+    "park_id": "PHI12",
+    "name": "Veterans Stadium",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "09/28/2003"
+  },
+  "PHI14": {
+    "park_id": "PHI14",
+    "name": "Huntingdon Grounds II",
+    "city": "Philadelphia",
+    "state": "PA",
+    "lat": 39.9059221,
+    "lng": -75.1664804,
+    "method": "city-cache",
+    "end": "09/06/1894"
+  },
+  "PIT01": {
+    "park_id": "PIT01",
+    "name": "Union Park",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "lat": 40.4469258,
+    "lng": -80.0056063,
+    "method": "city-cache",
+    "end": "08/24/1878"
+  },
+  "PIT02": {
+    "park_id": "PIT02",
+    "name": "Exposition Park I",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "lat": 40.4469258,
+    "lng": -80.0056063,
+    "method": "city-cache",
+    "end": "08/30/1884"
+  },
+  "PIT03": {
+    "park_id": "PIT03",
+    "name": "Exposition Park II",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "lat": 40.4469258,
+    "lng": -80.0056063,
+    "method": "city-cache",
+    "end": "06/09/1883"
+  },
+  "PIT04": {
+    "park_id": "PIT04",
+    "name": "Recreation Park",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "lat": 40.4469258,
+    "lng": -80.0056063,
+    "method": "city-cache",
+    "end": "09/30/1890"
+  },
+  "PIT05": {
+    "park_id": "PIT05",
+    "name": "Exposition Park III",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "lat": 40.4469258,
+    "lng": -80.0056063,
+    "method": "city-cache",
+    "end": "10/02/1915"
+  },
+  "PIT06": {
+    "park_id": "PIT06",
+    "name": "Forbes Field",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "lat": 40.4469258,
+    "lng": -80.0056063,
+    "method": "city-cache",
+    "end": "06/28/1970"
+  },
+  "PIT07": {
+    "park_id": "PIT07",
+    "name": "Three Rivers Stadium",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "lat": 40.4469258,
+    "lng": -80.0056063,
+    "method": "city-cache",
+    "end": "10/01/2000"
+  },
+  "PRO01": {
+    "park_id": "PRO01",
+    "name": "Adelaide Avenue Grounds",
+    "city": "Providence",
+    "state": "RI",
+    "lat": 41.8239891,
+    "lng": -71.4128343,
+    "method": "city",
+    "end": "06/22/1875"
+  },
+  "PRO02": {
+    "park_id": "PRO02",
+    "name": "Messer Street Grounds",
+    "city": "Providence",
+    "state": "RI",
+    "lat": 41.8239891,
+    "lng": -71.4128343,
+    "method": "city-cache",
+    "end": "09/09/1885"
+  },
+  "RCK01": {
+    "park_id": "RCK01",
+    "name": "Agricultural Society Fair Grounds",
+    "city": "Rockford",
+    "state": "IL",
+    "lat": 42.2713945,
+    "lng": -89.093966,
+    "method": "city",
+    "end": "09/26/1871"
+  },
+  "RIC01": {
+    "park_id": "RIC01",
+    "name": "Richmond Fair Grounds",
+    "city": "Richmond",
+    "state": "VA",
+    "lat": 37.5385087,
+    "lng": -77.43428,
+    "method": "city",
+    "end": "05/01/1875"
+  },
+  "RIC02": {
+    "park_id": "RIC02",
+    "name": "Allens Pasture",
+    "city": "Richmond",
+    "state": "VA",
+    "lat": 37.5385087,
+    "lng": -77.43428,
+    "method": "city-cache",
+    "end": "10/15/1884"
+  },
+  "ROC01": {
+    "park_id": "ROC01",
+    "name": "Culver Field I",
+    "city": "Rochester",
+    "state": "NY",
+    "lat": 43.157285,
+    "lng": -77.615214,
+    "method": "city",
+    "end": "10/06/1890"
+  },
+  "ROC02": {
+    "park_id": "ROC02",
+    "name": "Culver Field II",
+    "city": "Rochester",
+    "state": "NY",
+    "lat": 43.157285,
+    "lng": -77.615214,
+    "method": "city-cache",
+    "end": "08/29/1898"
+  },
+  "ROC03": {
+    "park_id": "ROC03",
+    "name": "Ontario Beach Grounds",
+    "city": "Rochester",
+    "state": "NY",
+    "lat": 43.157285,
+    "lng": -77.615214,
+    "method": "city-cache",
+    "end": "08/28/1898"
+  },
+  "SAI01": {
+    "park_id": "SAI01",
+    "name": "St. George Cricket Grounds",
+    "city": "New York",
+    "state": "NY",
+    "lat": 40.7127281,
+    "lng": -74.0060152,
+    "method": "city-cache",
+    "end": "06/14/1889"
+  },
+  "SAN01": {
+    "park_id": "SAN01",
+    "name": "Qualcomm Stadium",
+    "city": "San Diego",
+    "state": "CA",
+    "lat": 32.7071874,
+    "lng": -117.156913,
+    "method": "city-cache",
+    "end": "09/28/2003"
+  },
+  "SEA01": {
+    "park_id": "SEA01",
+    "name": "Sick's Stadium",
+    "city": "Seattle",
+    "state": "WA",
+    "lat": 47.5913974,
+    "lng": -122.332507,
+    "method": "city-cache",
+    "end": "10/02/1969"
+  },
+  "SEA02": {
+    "park_id": "SEA02",
+    "name": "Kingdome",
+    "city": "Seattle",
+    "state": "WA",
+    "lat": 47.5913974,
+    "lng": -122.332507,
+    "method": "city-cache",
+    "end": "06/27/1999"
+  },
+  "SFO01": {
+    "park_id": "SFO01",
+    "name": "Seals Stadium",
+    "city": "San Francisco",
+    "state": "CA",
+    "lat": 37.7811362,
+    "lng": -122.457083,
+    "method": "city-cache",
+    "end": "09/20/1959"
+  },
+  "SFO02": {
+    "park_id": "SFO02",
+    "name": "Candlestick Park",
+    "city": "San Francisco",
+    "state": "CA",
+    "lat": 37.7811362,
+    "lng": -122.457083,
+    "method": "city-cache",
+    "end": "09/30/1999"
+  },
+  "SJU01": {
+    "park_id": "SJU01",
+    "name": "Estadio Hiram Bithorn",
+    "city": "San Juan",
+    "state": "PR",
+    "lat": 18.465299,
+    "lng": -66.116666,
+    "method": "city",
+    "end": "06/30/2010"
+  },
+  "SPR01": {
+    "park_id": "SPR01",
+    "name": "Hampden Park Race Track",
+    "city": "Springfield",
+    "state": "MA",
+    "lat": 42.1018764,
+    "lng": -72.5886727,
+    "method": "city",
+    "end": "05/14/1875"
+  },
+  "STL01": {
+    "park_id": "STL01",
+    "name": "Red Stockings Base Ball Park",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city-cache",
+    "end": "07/04/1875"
+  },
+  "STL02": {
+    "park_id": "STL02",
+    "name": "Grand Avenue Park",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city-cache",
+    "end": "10/06/1877"
+  },
+  "STL03": {
+    "park_id": "STL03",
+    "name": "Sportsman's Park I",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city-cache",
+    "end": "10/13/1892"
+  },
+  "STL04": {
+    "park_id": "STL04",
+    "name": "Union Grounds",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city-cache",
+    "end": "09/23/1886"
+  },
+  "STL05": {
+    "park_id": "STL05",
+    "name": "Robison Field",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city-cache",
+    "end": "06/06/1920"
+  },
+  "STL06": {
+    "park_id": "STL06",
+    "name": "Sportsman's Park II",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city-cache",
+    "end": "10/06/1908"
+  },
+  "STL07": {
+    "park_id": "STL07",
+    "name": "Sportsman's Park III",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city-cache",
+    "end": "05/08/1966"
+  },
+  "STL08": {
+    "park_id": "STL08",
+    "name": "Handlan's Park",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city-cache",
+    "end": "10/03/1915"
+  },
+  "STL09": {
+    "park_id": "STL09",
+    "name": "Busch Stadium II",
+    "city": "St. Louis",
+    "state": "MO",
+    "lat": 38.6254063,
+    "lng": -90.190009,
+    "method": "city-cache",
+    "end": "10/02/2005"
+  },
+  "SYD01": {
+    "park_id": "SYD01",
+    "name": "Sydney Cricket Ground",
+    "city": "Sydney",
+    "state": "Australia",
+    "lat": -33.8698439,
+    "lng": 151.2082848,
+    "method": "city",
+    "end": "03/23/2014"
+  },
+  "SYR01": {
+    "park_id": "SYR01",
+    "name": "Star Park I",
+    "city": "Syracuse",
+    "state": "NY",
+    "lat": 43.0481221,
+    "lng": -76.1474244,
+    "method": "city",
+    "end": "09/10/1879"
+  },
+  "SYR02": {
+    "park_id": "SYR02",
+    "name": "Star Park II",
+    "city": "Syracuse",
+    "state": "NY",
+    "lat": 43.0481221,
+    "lng": -76.1474244,
+    "method": "city-cache",
+    "end": "10/06/1890"
+  },
+  "SYR03": {
+    "park_id": "SYR03",
+    "name": "Iron Pier",
+    "city": "Syracuse",
+    "state": "NY",
+    "lat": 43.0481221,
+    "lng": -76.1474244,
+    "method": "city-cache",
+    "end": "08/03/1890"
+  },
+  "THR01": {
+    "park_id": "THR01",
+    "name": "Three Rivers Park",
+    "city": "Three Rivers",
+    "state": "NY",
+    "lat": 43.2009013,
+    "lng": -76.277985,
+    "method": "city",
+    "end": "07/20/1890"
+  },
+  "TOK01": {
+    "park_id": "TOK01",
+    "name": "Tokyo Dome",
+    "city": "Tokyo",
+    "state": "JAP",
+    "lat": 35.6768601,
+    "lng": 139.7638947,
+    "method": "city",
+    "end": "03/26/2008"
+  },
+  "TOL01": {
+    "park_id": "TOL01",
+    "name": "League Park",
+    "city": "Toledo",
+    "state": "OH",
+    "lat": 41.6529143,
+    "lng": -83.5378173,
+    "method": "city",
+    "end": "09/23/1884"
+  },
+  "TOL02": {
+    "park_id": "TOL02",
+    "name": "Tri-State Fair Grounds",
+    "city": "Toledo",
+    "state": "OH",
+    "lat": 41.6529143,
+    "lng": -83.5378173,
+    "method": "city-cache",
+    "end": "09/13/1884"
+  },
+  "TOL03": {
+    "park_id": "TOL03",
+    "name": "Speranza Park",
+    "city": "Toledo",
+    "state": "OH",
+    "lat": 41.6529143,
+    "lng": -83.5378173,
+    "method": "city-cache",
+    "end": "10/02/1890"
+  },
+  "TOL04": {
+    "park_id": "TOL04",
+    "name": "Armory Park",
+    "city": "Toledo",
+    "state": "OH",
+    "lat": 41.6529143,
+    "lng": -83.5378173,
+    "method": "city-cache",
+    "end": "08/16/1903"
+  },
+  "TOR01": {
+    "park_id": "TOR01",
+    "name": "Exhibition Stadium",
+    "city": "Toronto",
+    "state": "ONT",
+    "lat": 43.6416599,
+    "lng": -79.3891976,
+    "method": "city-cache",
+    "end": "05/28/1989"
+  },
+  "TRO01": {
+    "park_id": "TRO01",
+    "name": "Haymakers' Grounds",
+    "city": "Troy",
+    "state": "NY",
+    "lat": 42.7284117,
+    "lng": -73.6917878,
+    "method": "city",
+    "end": "09/30/1881"
+  },
+  "TRO02": {
+    "park_id": "TRO02",
+    "name": "Putnam Grounds",
+    "city": "Troy",
+    "state": "NY",
+    "lat": 42.7284117,
+    "lng": -73.6917878,
+    "method": "city-cache",
+    "end": "05/30/1882"
+  },
+  "WAR01": {
+    "park_id": "WAR01",
+    "name": "Rocky Point Park",
+    "city": "Warwick",
+    "state": "RI",
+    "lat": 41.6992717,
+    "lng": -71.4586114,
+    "method": "city",
+    "end": "09/06/1903"
+  },
+  "WAS01": {
+    "park_id": "WAS01",
+    "name": "Olympic Grounds",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "06/08/1875"
+  },
+  "WAS02": {
+    "park_id": "WAS02",
+    "name": "National Grounds",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "05/25/1872"
+  },
+  "WAS03": {
+    "park_id": "WAS03",
+    "name": "Capitol Grounds",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "09/25/1884"
+  },
+  "WAS04": {
+    "park_id": "WAS04",
+    "name": "Athletic Park",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "08/05/1884"
+  },
+  "WAS05": {
+    "park_id": "WAS05",
+    "name": "Swampoodle Grounds",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "09/21/1889"
+  },
+  "WAS06": {
+    "park_id": "WAS06",
+    "name": "Boundary Field",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "10/14/1899"
+  },
+  "WAS07": {
+    "park_id": "WAS07",
+    "name": "American League Park I",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "09/29/1903"
+  },
+  "WAS08": {
+    "park_id": "WAS08",
+    "name": "American League Park II",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "10/06/1910"
+  },
+  "WAS09": {
+    "park_id": "WAS09",
+    "name": "Griffith Stadium",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "09/21/1961"
+  },
+  "WAS10": {
+    "park_id": "WAS10",
+    "name": "Robert F. Kennedy Stadium",
+    "city": "Washington",
+    "state": "DC",
+    "lat": 38.8727332,
+    "lng": -77.0074815,
+    "method": "city-cache",
+    "end": "09/23/2007"
+  },
+  "WAT01": {
+    "park_id": "WAT01",
+    "name": "Troy Ball Club Grounds",
+    "city": "Watervliet",
+    "state": "NY",
+    "lat": 42.7300784,
+    "lng": -73.7012299,
+    "method": "city",
+    "end": "08/26/1882"
+  },
+  "WAV01": {
+    "park_id": "WAV01",
+    "name": "Waverly Fairgrounds",
+    "city": "Waverly",
+    "state": "NJ",
+    "lat": 39.960297,
+    "lng": -74.791715,
+    "method": "city",
+    "end": "07/23/1873"
+  },
+  "WEE01": {
+    "park_id": "WEE01",
+    "name": "Monitor Grounds",
+    "city": "Weehawken",
+    "state": "NJ",
+    "lat": 40.7695457,
+    "lng": -74.0204177,
+    "method": "city",
+    "end": "09/11/1887"
+  },
+  "WHE01": {
+    "park_id": "WHE01",
+    "name": "Island Grounds",
+    "city": "Wheeling",
+    "state": "WV",
+    "lat": 40.0639616,
+    "lng": -80.7209149,
+    "method": "city",
+    "end": "09/22/1890"
+  },
+  "WIL01": {
+    "park_id": "WIL01",
+    "name": "Union Street Park",
+    "city": "Wilmington",
+    "state": "DE",
+    "lat": 39.7459468,
+    "lng": -75.546589,
+    "method": "city",
+    "end": "09/15/1884"
+  },
+  "WIL02": {
+    "park_id": "WIL02",
+    "name": "BB&T Ballpark at Bowman Field",
+    "city": "Williamsport",
+    "state": "PA",
+    "lat": 41.2411556,
+    "lng": -77.0011096,
+    "method": "city",
+    "end": "08/20/2017"
+  },
+  "WNY01": {
+    "park_id": "WNY01",
+    "name": "West New York Field Club Grounds",
+    "city": "West New York",
+    "state": "NJ",
+    "lat": 40.7856117,
+    "lng": -74.0093129,
+    "method": "city",
+    "end": "09/17/1899"
+  },
+  "WOR01": {
+    "park_id": "WOR01",
+    "name": "Agricultural County Fair Grounds I",
+    "city": "Worcester",
+    "state": "MA",
+    "lat": 42.2625621,
+    "lng": -71.8018877,
+    "method": "city",
+    "end": "09/29/1882"
+  },
+  "WOR02": {
+    "park_id": "WOR02",
+    "name": "Agricultural County Fair Grounds II",
+    "city": "Worcester",
+    "state": "MA",
+    "lat": 42.2625621,
+    "lng": -71.8018877,
+    "method": "city-cache",
+    "end": "08/17/1887"
+  },
+  "WOR03": {
+    "park_id": "WOR03",
+    "name": "Worcester Driving Park Grounds",
+    "city": "Worcester",
+    "state": "MA",
+    "lat": 42.2625621,
+    "lng": -71.8018877,
+    "method": "city-cache",
+    "end": "10/30/1874"
+  }
+}

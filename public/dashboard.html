@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DiamondEdge — MLB Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0e1318;
+    --surface2: #141b22;
+    --border: #1e2a35;
+    --accent: #00e5a0;
+    --accent2: #ff6b35;
+    --accent3: #4d9eff;
+    --text: #e8edf2;
+    --muted: #4a6070;
+    --muted2: #7a95a8;
+    --win: #00e5a0;
+    --loss: #ff4d6a;
+    --push: #ffd166;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 80% 10%, rgba(0,229,160,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 10% 80%, rgba(77,158,255,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 58px;
+    background: rgba(8,12,16,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .nav-links a { color: var(--muted2); text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover, .nav-links a.active { color: var(--accent); }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    background: rgba(0,229,160,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.3);
+    padding: 3px 10px;
+    border-radius: 2px;
+    letter-spacing: 0.08em;
+  }
+
+  .btn {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 7px 18px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted2);
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #080c10;
+  }
+  .btn-primary:hover { background: #00ffb2; }
+
+  /* ── LAYOUT ── */
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem;
+  }
+
+  /* ── DATE BAR ── */
+  .date-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .date-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  .date-nav {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .date-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    padding: 5px 14px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.05em;
+  }
+  .date-chip.active {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .spacer { flex: 1; }
+
+  .model-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── STAT STRIP ── */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+
+  .stat-cell {
+    background: var(--surface);
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+
+  .stat-sub {
+    font-size: 0.72rem;
+    color: var(--muted2);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .green { color: var(--win); }
+  .red { color: var(--loss); }
+  .blue { color: var(--accent3); }
+  .orange { color: var(--accent2); }
+
+  /* ── MAIN GRID ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  /* ── GAMES LIST ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.08em;
+    color: var(--muted2);
+  }
+
+  .count-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    background: var(--surface2);
+    color: var(--muted2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .filter-chip {
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.04em;
+  }
+  .filter-chip.on {
+    background: rgba(77,158,255,0.12);
+    border-color: var(--accent3);
+    color: var(--accent3);
+  }
+
+  /* ── GAME CARD ── */
+  .game-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 1px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    animation: fadeUp 0.4s ease both;
+  }
+  .game-card:nth-child(1) { animation-delay: 0.05s; }
+  .game-card:nth-child(2) { animation-delay: 0.1s; }
+  .game-card:nth-child(3) { animation-delay: 0.15s; }
+  .game-card:nth-child(4) { animation-delay: 0.2s; }
+  .game-card:nth-child(5) { animation-delay: 0.25s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .game-card:hover {
+    border-color: rgba(0,229,160,0.25);
+    background: var(--surface2);
+  }
+
+  .game-card.featured {
+    border-color: rgba(0,229,160,0.35);
+    background: linear-gradient(135deg, var(--surface2) 0%, rgba(0,229,160,0.04) 100%);
+  }
+
+  .card-top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 1.2rem 1.5rem 1rem;
+    gap: 1rem;
+  }
+
+  .team-block { display: flex; flex-direction: column; gap: 4px; }
+  .team-block.away { align-items: flex-start; }
+  .team-block.home { align-items: flex-end; }
+
+  .team-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+
+  .team-record {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+
+  .team-pitcher {
+    font-size: 0.72rem;
+    color: var(--muted2);
+  }
+
+  .vs-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .vs-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .game-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted2);
+  }
+
+  /* Win probability bar */
+  .prob-bar-wrap {
+    padding: 0 1.5rem 1.2rem;
+  }
+
+  .prob-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+
+  .prob-pct {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+  }
+
+  .prob-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+    display: flex;
+  }
+
+  .prob-fill-away {
+    height: 100%;
+    background: var(--accent3);
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .prob-fill-home {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    margin-left: auto;
+  }
+
+  /* Card footer */
+  .card-footer {
+    display: flex;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding: 0.7rem 1.5rem;
+    gap: 1rem;
+  }
+
+  .bet-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    padding: 3px 10px;
+    border-radius: 2px;
+    border: 1px solid;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+  }
+
+  .bet-pill.ml {
+    border-color: rgba(0,229,160,0.4);
+    color: var(--accent);
+    background: rgba(0,229,160,0.07);
+  }
+
+  .bet-pill.over {
+    border-color: rgba(255,107,53,0.4);
+    color: var(--accent2);
+    background: rgba(255,107,53,0.07);
+  }
+
+  .bet-pill.under {
+    border-color: rgba(77,158,255,0.4);
+    color: var(--accent3);
+    background: rgba(77,158,255,0.07);
+  }
+
+  .confidence {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  .conf-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-right: 5px;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar { display: flex; flex-direction: column; gap: 1.2rem; }
+
+  .side-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .side-header {
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .side-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    color: var(--muted2);
+  }
+
+  .side-body { padding: 1rem 1.2rem; }
+
+  /* Model accuracy */
+  .accuracy-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .accuracy-row:last-child { border-bottom: none; }
+
+  .model-name { color: var(--muted2); }
+
+  .acc-bar-wrap { flex: 1; margin: 0 1rem; }
+  .acc-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .acc-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  .acc-pct {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    min-width: 38px;
+    text-align: right;
+  }
+
+  /* Top picks */
+  .pick-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .pick-row:last-child { border-bottom: none; }
+
+  .pick-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    color: var(--muted);
+    min-width: 20px;
+  }
+
+  .pick-content { flex: 1; }
+
+  .pick-game {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .pick-detail {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted2);
+  }
+
+  .pick-conf {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  /* Live ticker */
+  .ticker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+  }
+  .ticker-item:last-child { border-bottom: none; }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--loss);
+    animation: pulse 1.2s infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .ticker-score {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-left: auto;
+  }
+
+  .ticker-inning {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  /* ── BOTTOM SECTION ── */
+  .pitcher-section {
+    margin-top: 2rem;
+  }
+
+  .pitcher-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .pitcher-card {
+    background: var(--surface);
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .pitcher-card:hover { background: var(--surface2); }
+
+  .pitcher-row-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .pitcher-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+
+  .pitcher-team {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .k-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: var(--accent2);
+    line-height: 1;
+  }
+
+  .k-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 1px;
+  }
+
+  .pitcher-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+
+  .pstat {
+    background: var(--surface2);
+    padding: 4px 6px;
+    border-radius: 2px;
+  }
+
+  .pstat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .pstat-key {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .pitcher-grid { grid-template-columns: 1fr; }
+    .stat-strip { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Diamond<span>Edge</span></div>
+  <ul class="nav-links">
+    <li><a href="#" class="active">Today</a></li>
+    <li><a href="#">Schedule</a></li>
+    <li><a href="#">Pitchers</a></li>
+    <li><a href="#">HR Props</a></li>
+    <li><a href="#">Model Stats</a></li>
+  </ul>
+  <div class="nav-right">
+    <span class="badge">MLB · LIVE</span>
+    <button class="btn btn-outline">Sign In</button>
+    <button class="btn btn-primary">Pro</button>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- DATE BAR -->
+  <div class="date-bar">
+    <div class="date-label">April 14, 2026</div>
+    <div class="date-nav">
+      <button class="date-chip">Apr 12</button>
+      <button class="date-chip">Apr 13</button>
+      <button class="date-chip active">Today</button>
+      <button class="date-chip">Apr 15</button>
+    </div>
+    <div class="spacer"></div>
+    <span class="model-tag">Last updated: 2 min ago · v2.4.1</span>
+  </div>
+
+  <!-- STAT STRIP -->
+  <div class="stat-strip">
+    <div class="stat-cell">
+      <span class="stat-label">Season Record</span>
+      <span class="stat-value green">68<span style="font-size:1rem;color:var(--muted2)">-</span>41</span>
+      <span class="stat-sub">Moneyline · +18.4u ROI</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-label">Games Today</span>
+      <span class="stat-value blue">14</span>
+      <span class="stat-sub">3 high confidence</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-label">Model Accuracy</span>
+      <span class="stat-value orange">63.4%</span>
+      <span class="stat-sub">30-day rolling avg</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-label">Top K Prop</span>
+      <span class="stat-value" style="color:var(--accent2)">9.5</span>
+      <span class="stat-sub">Cole NYY · 74% proj over</span>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- GAMES -->
+    <div>
+      <div class="section-header">
+        <span class="section-title">Today's Games</span>
+        <span class="count-pill">14 games</span>
+      </div>
+
+      <div class="filter-row">
+        <button class="filter-chip on">All</button>
+        <button class="filter-chip">High Confidence</button>
+        <button class="filter-chip">Moneyline</button>
+        <button class="filter-chip">Over/Under</button>
+        <button class="filter-chip">HR Props</button>
+      </div>
+
+      <!-- GAME 1 - FEATURED -->
+      <div class="game-card featured">
+        <div class="card-top">
+          <div class="team-block away">
+            <span class="team-name">NEW YORK</span>
+            <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--muted2);letter-spacing:0.1em">YANKEES</span>
+            <span class="team-record">22-10 · .688</span>
+            <span class="team-pitcher">G. Cole · 2.71 ERA</span>
+          </div>
+          <div class="vs-block">
+            <span class="vs-text">@</span>
+            <span class="game-time">7:05 PM</span>
+            <span style="font-family:'DM Mono';font-size:0.6rem;color:var(--accent);margin-top:3px">TOP PICK</span>
+          </div>
+          <div class="team-block home">
+            <span class="team-name">BOSTON</span>
+            <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--muted2);letter-spacing:0.1em;text-align:right">RED SOX</span>
+            <span class="team-record">15-17 · .469</span>
+            <span class="team-pitcher">B. Sale · 3.44 ERA</span>
+          </div>
+        </div>
+        <div class="prob-bar-wrap">
+          <div class="prob-labels">
+            <span class="prob-pct blue">62%</span>
+            <span style="font-size:0.65rem;font-family:'DM Mono';color:var(--muted)">WIN PROBABILITY</span>
+            <span class="prob-pct green">38%</span>
+          </div>
+          <div class="prob-bar">
+            <div class="prob-fill-away" style="width:62%"></div>
+            <div class="prob-fill-home" style="width:38%"></div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="bet-pill ml">ML: NYY -145</span>
+          <span class="bet-pill under">U 8.5 (-108)</span>
+          <span class="confidence">
+            <span class="conf-dot" style="background:var(--accent)"></span>
+            HIGH · 82% conf
+          </span>
+        </div>
+      </div>
+
+      <!-- GAME 2 -->
+      <div class="game-card">
+        <div class="card-top">
+          <div class="team-block away">
+            <span class="team-name">LOS ANGELES</span>
+            <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--muted2);letter-spacing:0.1em">DODGERS</span>
+            <span class="team-record">20-12 · .625</span>
+            <span class="team-pitcher">Y. Yamamoto · 3.02 ERA</span>
+          </div>
+          <div class="vs-block">
+            <span class="vs-text">@</span>
+            <span class="game-time">9:10 PM</span>
+          </div>
+          <div class="team-block home">
+            <span class="team-name">SAN FRAN</span>
+            <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--muted2);letter-spacing:0.1em;text-align:right">GIANTS</span>
+            <span class="team-record">17-15 · .531</span>
+            <span class="team-pitcher">L. Webb · 2.90 ERA</span>
+          </div>
+        </div>
+        <div class="prob-bar-wrap">
+          <div class="prob-labels">
+            <span class="prob-pct blue">57%</span>
+            <span style="font-size:0.65rem;font-family:'DM Mono';color:var(--muted)">WIN PROBABILITY</span>
+            <span class="prob-pct green">43%</span>
+          </div>
+          <div class="prob-bar">
+            <div class="prob-fill-away" style="width:57%"></div>
+            <div class="prob-fill-home" style="width:43%"></div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="bet-pill ml">ML: LAD -122</span>
+          <span class="bet-pill under">U 7.5 (-112)</span>
+          <span class="confidence">
+            <span class="conf-dot" style="background:var(--push)"></span>
+            MED · 61% conf
+          </span>
+        </div>
+      </div>
+
+      <!-- GAME 3 -->
+      <div class="game-card">
+        <div class="card-top">
+          <div class="team-block away">
+            <span class="team-name">ATLANTA</span>
+            <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--muted2);letter-spacing:0.1em">BRAVES</span>
+            <span class="team-record">19-13 · .594</span>
+            <span class="team-pitcher">S. Strider · 2.88 ERA</span>
+          </div>
+          <div class="vs-block">
+            <span class="vs-text">@</span>
+            <span class="game-time">7:20 PM</span>
+          </div>
+          <div class="team-block home">
+            <span class="team-name">PHILLY</span>
+            <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--muted2);letter-spacing:0.1em;text-align:right">PHILLIES</span>
+            <span class="team-record">21-11 · .656</span>
+            <span class="team-pitcher">Z. Wheeler · 3.15 ERA</span>
+          </div>
+        </div>
+        <div class="prob-bar-wrap">
+          <div class="prob-labels">
+            <span class="prob-pct blue">44%</span>
+            <span style="font-size:0.65rem;font-family:'DM Mono';color:var(--muted)">WIN PROBABILITY</span>
+            <span class="prob-pct green">56%</span>
+          </div>
+          <div class="prob-bar">
+            <div class="prob-fill-away" style="width:44%"></div>
+            <div class="prob-fill-home" style="width:56%"></div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="bet-pill ml">ML: PHI -118</span>
+          <span class="bet-pill over">O 8.5 (-110)</span>
+          <span class="confidence">
+            <span class="conf-dot" style="background:var(--push)"></span>
+            MED · 58% conf
+          </span>
+        </div>
+      </div>
+
+      <!-- GAME 4 -->
+      <div class="game-card">
+        <div class="card-top">
+          <div class="team-block away">
+            <span class="team-name">HOUSTON</span>
+            <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--muted2);letter-spacing:0.1em">ASTROS</span>
+            <span class="team-record">16-16 · .500</span>
+            <span class="team-pitcher">F. Valdez · 3.56 ERA</span>
+          </div>
+          <div class="vs-block">
+            <span class="vs-text">@</span>
+            <span class="game-time">8:40 PM</span>
+          </div>
+          <div class="team-block home">
+            <span class="team-name">TEXAS</span>
+            <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--muted2);letter-spacing:0.1em;text-align:right">RANGERS</span>
+            <span class="team-record">18-14 · .563</span>
+            <span class="team-pitcher">N. Eovaldi · 3.22 ERA</span>
+          </div>
+        </div>
+        <div class="prob-bar-wrap">
+          <div class="prob-labels">
+            <span class="prob-pct blue">48%</span>
+            <span style="font-size:0.65rem;font-family:'DM Mono';color:var(--muted)">WIN PROBABILITY</span>
+            <span class="prob-pct green">52%</span>
+          </div>
+          <div class="prob-bar">
+            <div class="prob-fill-away" style="width:48%"></div>
+            <div class="prob-fill-home" style="width:52%"></div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="bet-pill ml">ML: TEX -108</span>
+          <span class="bet-pill under">U 9.0 (-115)</span>
+          <span class="confidence">
+            <span class="conf-dot" style="background:var(--muted)"></span>
+            LOW · 51% conf
+          </span>
+        </div>
+      </div>
+
+      <!-- Pitcher Props Section -->
+      <div class="pitcher-section">
+        <div class="section-header">
+          <span class="section-title">Strikeout Props</span>
+          <span class="count-pill">Top 3 today</span>
+        </div>
+        <div class="pitcher-grid">
+          <div class="pitcher-card">
+            <div class="pitcher-row-top">
+              <div>
+                <div class="pitcher-name">Gerrit Cole</div>
+                <div class="pitcher-team">NYY · vs BOS</div>
+              </div>
+              <div style="text-align:right">
+                <div class="k-badge">9.5</div>
+                <div class="k-label">K LINE</div>
+              </div>
+            </div>
+            <div class="pitcher-stats">
+              <div class="pstat">
+                <div class="pstat-val green">74%</div>
+                <div class="pstat-key">Proj Over</div>
+              </div>
+              <div class="pstat">
+                <div class="pstat-val">10.8</div>
+                <div class="pstat-key">Proj K's</div>
+              </div>
+              <div class="pstat">
+                <div class="pstat-val">31.2%</div>
+                <div class="pstat-key">K Rate</div>
+              </div>
+            </div>
+          </div>
+          <div class="pitcher-card">
+            <div class="pitcher-row-top">
+              <div>
+                <div class="pitcher-name">Spencer Strider</div>
+                <div class="pitcher-team">ATL · vs PHI</div>
+              </div>
+              <div style="text-align:right">
+                <div class="k-badge">8.5</div>
+                <div class="k-label">K LINE</div>
+              </div>
+            </div>
+            <div class="pitcher-stats">
+              <div class="pstat">
+                <div class="pstat-val green">68%</div>
+                <div class="pstat-key">Proj Over</div>
+              </div>
+              <div class="pstat">
+                <div class="pstat-val">9.4</div>
+                <div class="pstat-key">Proj K's</div>
+              </div>
+              <div class="pstat">
+                <div class="pstat-val">34.8%</div>
+                <div class="pstat-key">K Rate</div>
+              </div>
+            </div>
+          </div>
+          <div class="pitcher-card">
+            <div class="pitcher-row-top">
+              <div>
+                <div class="pitcher-name">Logan Webb</div>
+                <div class="pitcher-team">SF · vs LAD</div>
+              </div>
+              <div style="text-align:right">
+                <div class="k-badge">7.5</div>
+                <div class="k-label">K LINE</div>
+              </div>
+            </div>
+            <div class="pitcher-stats">
+              <div class="pstat">
+                <div class="pstat-val" style="color:var(--accent3)">41%</div>
+                <div class="pstat-key">Proj Over</div>
+              </div>
+              <div class="pstat">
+                <div class="pstat-val">7.1</div>
+                <div class="pstat-key">Proj K's</div>
+              </div>
+              <div class="pstat">
+                <div class="pstat-val">22.4%</div>
+                <div class="pstat-key">K Rate</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- Live Scores -->
+      <div class="side-card">
+        <div class="side-header">
+          <span class="side-title">Live Now</span>
+          <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--loss)">● LIVE</span>
+        </div>
+        <div class="side-body" style="padding:0.6rem 1.2rem">
+          <div class="ticker-item">
+            <span class="live-dot"></span>
+            <span style="font-size:0.78rem;color:var(--muted2)">CHC @ STL</span>
+            <span class="ticker-inning">B6</span>
+            <span class="ticker-score">3 — 2</span>
+          </div>
+          <div class="ticker-item">
+            <span class="live-dot"></span>
+            <span style="font-size:0.78rem;color:var(--muted2)">MIA @ NYM</span>
+            <span class="ticker-inning">T4</span>
+            <span class="ticker-score">1 — 4</span>
+          </div>
+          <div class="ticker-item">
+            <span class="live-dot"></span>
+            <span style="font-size:0.78rem;color:var(--muted2)">MIN @ CLE</span>
+            <span class="ticker-inning">B7</span>
+            <span class="ticker-score">5 — 5</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Picks -->
+      <div class="side-card">
+        <div class="side-header">
+          <span class="side-title">Top Picks Today</span>
+          <span class="badge">3 LOCKS</span>
+        </div>
+        <div class="side-body" style="padding:0.6rem 1.2rem">
+          <div class="pick-row">
+            <span class="pick-num">1</span>
+            <div class="pick-content">
+              <div class="pick-game">NYY ML vs BOS</div>
+              <div class="pick-detail">Cole dominant · BOS weak vs RHP</div>
+            </div>
+            <span class="pick-conf green">82%</span>
+          </div>
+          <div class="pick-row">
+            <span class="pick-num">2</span>
+            <div class="pick-content">
+              <div class="pick-game">Cole OVER 9.5 K's</div>
+              <div class="pick-detail">BOS K rate 26.4% last 14G</div>
+            </div>
+            <span class="pick-conf green">74%</span>
+          </div>
+          <div class="pick-row">
+            <span class="pick-num">3</span>
+            <div class="pick-content">
+              <div class="pick-game">LAD/SF UNDER 7.5</div>
+              <div class="pick-detail">Webb + Yamamoto both elite</div>
+            </div>
+            <span class="pick-conf" style="color:var(--push)">68%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model Accuracy -->
+      <div class="side-card">
+        <div class="side-header">
+          <span class="side-title">Model Performance</span>
+          <span style="font-family:'DM Mono';font-size:0.65rem;color:var(--muted)">30D</span>
+        </div>
+        <div class="side-body" style="padding:0.6rem 1.2rem">
+          <div class="accuracy-row">
+            <span class="model-name">Game Winner</span>
+            <div class="acc-bar-wrap">
+              <div class="acc-bar"><div class="acc-fill" style="width:63.4%"></div></div>
+            </div>
+            <span class="acc-pct">63.4%</span>
+          </div>
+          <div class="accuracy-row">
+            <span class="model-name">Strikeouts</span>
+            <div class="acc-bar-wrap">
+              <div class="acc-bar"><div class="acc-fill" style="width:71%;background:var(--accent2)"></div></div>
+            </div>
+            <span class="acc-pct" style="color:var(--accent2)">71.0%</span>
+          </div>
+          <div class="accuracy-row">
+            <span class="model-name">Home Runs</span>
+            <div class="acc-bar-wrap">
+              <div class="acc-bar"><div class="acc-fill" style="width:58%;background:var(--accent3)"></div></div>
+            </div>
+            <span class="acc-pct" style="color:var(--accent3)">58.0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- HR Props -->
+      <div class="side-card">
+        <div class="side-header">
+          <span class="side-title">HR Props</span>
+        </div>
+        <div class="side-body" style="padding:0.6rem 1.2rem">
+          <div class="pick-row">
+            <span class="pick-num" style="font-size:1.3rem">💣</span>
+            <div class="pick-content">
+              <div class="pick-game">A. Judge · NYY</div>
+              <div class="pick-detail">vs Sale · FB% 58% · park +12%</div>
+            </div>
+            <span class="pick-conf green">31%</span>
+          </div>
+          <div class="pick-row">
+            <span class="pick-num" style="font-size:1.3rem">💣</span>
+            <div class="pick-content">
+              <div class="pick-game">F. Freeman · LAD</div>
+              <div class="pick-detail">vs Webb · pull FB · Oracle neutral</div>
+            </div>
+            <span class="pick-conf" style="color:var(--push)">22%</span>
+          </div>
+          <div class="pick-row" style="border:none">
+            <span class="pick-num" style="font-size:1.3rem">💣</span>
+            <div class="pick-content">
+              <div class="pick-game">B. Harper · PHI</div>
+              <div class="pick-detail">vs Strider · SL heavy · CB parks</div>
+            </div>
+            <span class="pick-conf" style="color:var(--push)">19%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

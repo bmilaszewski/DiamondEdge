@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="52" height="48" viewBox="0 0 52 48">
+  <!-- field lines -->
+  <line x1="26" y1="8" x2="43" y2="25" stroke="#333" stroke-width="1"/>
+  <line x1="43" y1="25" x2="26" y2="40" stroke="#333" stroke-width="1"/>
+  <line x1="26" y1="40" x2="9" y2="25" stroke="#333" stroke-width="1"/>
+  <line x1="9" y1="25" x2="26" y2="8" stroke="#333" stroke-width="1"/>
+  <!-- 2B (top) empty -->
+  <rect x="21" y="3" width="10" height="10" transform="rotate(45,26,8)" fill="#1e1e1e" stroke="#555" stroke-width="1.5"/>
+  <!-- 1B (right) empty -->
+  <rect x="38" y="20" width="10" height="10" transform="rotate(45,43,25)" fill="#1e1e1e" stroke="#555" stroke-width="1.5"/>
+  <!-- 3B (left) occupied -->
+  <rect x="4" y="20" width="10" height="10" transform="rotate(45,9,25)" fill="#f59e0b" stroke="#d97706" stroke-width="1.5"/>
+  <!-- home plate -->
+  <polygon points="26,44 22,40 22,37 30,37 30,40" fill="#1e1e1e" stroke="#555" stroke-width="1.2"/>
+</svg>

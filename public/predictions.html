@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DiamondEdge — Predictions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#080c10;--surface:#0e1318;--surface2:#141b22;--border:#1e2a35;--border2:#253344;
+    --accent:#00e5a0;--accent2:#ff6b35;--accent3:#4d9eff;--text:#e8edf2;
+    --muted:#4a6070;--muted2:#7a95a8;--win:#00e5a0;--loss:#ff4d6a;--push:#ffd166;
+    --mono:'DM Mono',monospace;--display:'Bebas Neue',sans-serif;--body:'DM Sans',sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 55% 35% at 85% 5%,rgba(0,229,160,.04) 0%,transparent 60%),radial-gradient(ellipse 45% 55% at 5% 85%,rgba(77,158,255,.04) 0%,transparent 60%);pointer-events:none;z-index:0;}
+  .shell{display:flex;height:100vh;overflow:hidden;position:relative;z-index:1;}
+  /* SIDEBAR */
+  .sidebar{width:210px;min-width:210px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:10;}
+  .logo{padding:22px 18px 18px;border-bottom:1px solid var(--border);}
+  .logo-mark{font-family:var(--display);font-size:1.7rem;letter-spacing:.07em;line-height:1;color:var(--text);}
+  .logo-mark span{color:var(--accent);}
+  .logo-sub{font-family:var(--mono);font-size:.62rem;letter-spacing:.15em;color:var(--muted);margin-top:4px;text-transform:uppercase;}
+  .nav{flex:1;padding:10px 0;}
+  .nav-section{padding:14px 18px 5px;font-family:var(--mono);font-size:.6rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:.8rem;font-weight:500;letter-spacing:.05em;color:var(--muted2);border-left:2px solid transparent;cursor:pointer;transition:all .15s;text-decoration:none;user-select:none;}
+  .nav-item:hover{color:var(--text);background:var(--surface2);}
+  .nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(0,229,160,.05);}
+  .nav-icon{font-size:.95rem;width:18px;text-align:center;flex-shrink:0;}
+  .sidebar-footer{padding:14px 18px;border-top:1px solid var(--border);font-family:var(--mono);font-size:.65rem;color:var(--muted);line-height:1.6;}
+  /* MAIN */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{height:54px;min-height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+  .topbar-left{display:flex;align-items:center;gap:14px;}
+  .topbar-title{font-family:var(--display);font-size:1.15rem;letter-spacing:.07em;color:var(--text);}
+  .topbar-right{display:flex;align-items:center;gap:10px;}
+  .badge{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:2px;}
+  .badge-accent{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.3);}
+  .badge-blue{background:rgba(77,158,255,.1);color:var(--accent3);border:1px solid rgba(77,158,255,.3);}
+  .badge-muted{background:var(--surface2);color:var(--muted2);border:1px solid var(--border);}
+  .btn-refresh{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;padding:6px 14px;background:var(--surface2);border:1px solid var(--border);color:var(--muted2);border-radius:2px;cursor:pointer;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+  .btn-refresh:hover{border-color:var(--accent3);color:var(--accent3);}
+  /* CONTENT */
+  .content{flex:1;overflow-y:auto;padding:22px 24px 40px;}
+  /* TABS */
+  .tab-bar{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);}
+  .tab-btn{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:500;padding:10px 22px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;transition:all .15s;margin-bottom:-1px;}
+  .tab-btn:hover{color:var(--muted2);}
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tab-panel{display:none;animation:fadeIn .2s ease;}
+  .tab-panel.active{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  /* STAT STRIP */
+  .stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:3px;overflow:hidden;margin-bottom:18px;}
+  .stat-cell{background:var(--surface);padding:14px 18px;}
+  .stat-label{font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+  .stat-val{font-family:var(--display);font-size:1.8rem;letter-spacing:.03em;line-height:1;color:var(--text);}
+  .stat-sub{font-family:var(--mono);font-size:.62rem;color:var(--muted2);margin-top:3px;}
+  /* CARD */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:3px;overflow:hidden;margin-bottom:18px;}
+  .card-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface2);}
+  .card-title{font-family:var(--display);font-size:1rem;letter-spacing:.08em;color:var(--muted2);}
+  .card-actions{display:flex;align-items:center;gap:8px;}
+  /* CORR STRIP */
+  .corr-strip{display:flex;gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
+  .corr-cell{flex:1;background:rgba(0,229,160,.02);padding:8px 14px;display:flex;align-items:center;gap:8px;}
+  .corr-bar{height:3px;border-radius:2px;flex-shrink:0;}
+  .corr-label{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;color:var(--muted2);}
+  .corr-r2{font-family:var(--mono);font-size:.65rem;font-weight:500;margin-left:auto;}
+  /* TABLE */
+  .tbl-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{padding:9px 14px;text-align:left;font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;}
+  thead th:hover{color:var(--muted2);}
+  thead th.sort-asc::after{content:' ↑';color:var(--accent);}
+  thead th.sort-desc::after{content:' ↓';color:var(--accent);}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:var(--surface2);}
+  tbody td{padding:10px 14px;vertical-align:middle;}
+  td.mono{font-family:var(--mono);font-size:.8rem;}
+  /* REASON MODAL */
+  .reason-modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
+  .reason-modal.open{display:flex;}
+  .reason-box{background:var(--surface);border:1px solid var(--border2);border-radius:4px;max-width:560px;width:92%;padding:32px 30px 28px;position:relative;animation:fadeIn .15s ease;}
+  .reason-box-matchup{font-family:var(--display);font-size:1.4rem;letter-spacing:.06em;color:var(--text);margin-bottom:4px;}
+  .reason-box-meta{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:22px;display:flex;gap:14px;align-items:center;}
+  .reason-box-text{font-size:.9rem;line-height:1.8;color:var(--muted2);}
+  .reason-box-label{font-family:var(--mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  .reason-close{position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;font-family:var(--mono);padding:2px 6px;border-radius:2px;transition:color .15s;}
+  .reason-close:hover{color:var(--text);}
+  .reason-details{margin-top:6px;}
+  .reason-details summary{font-family:var(--mono);font-size:.65rem;letter-spacing:.08em;color:var(--accent3);cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:rgba(77,158,255,.08);border:1px solid rgba(77,158,255,.3);border-radius:2px;transition:background .15s;}
+  .reason-details summary::-webkit-details-marker{display:none;}
+  .reason-details summary:hover{background:rgba(77,158,255,.18);}
+  .reason-details[open] summary{color:var(--accent);background:rgba(0,229,160,.08);border-color:rgba(0,229,160,.3);}
+  .reason-text{margin-top:10px;font-size:.82rem;line-height:1.7;color:var(--muted2);max-width:480px;padding:12px 14px;background:var(--surface2);border-left:2px solid var(--accent3);border-radius:0 2px 2px 0;}
+  tbody tr.game-row{cursor:default;}
+  /* MATCHUP */
+  .matchup-cell{display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;}
+  .team-chip{font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.08em;padding:2px 8px;border-radius:2px;background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);color:var(--accent);}
+  .vs-sep{font-family:var(--mono);font-size:.65rem;color:var(--muted);}
+  /* PROB BAR */
+  .prob-wrap{display:flex;align-items:center;gap:8px;min-width:130px;}
+  .prob-track{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .prob-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .6s cubic-bezier(.4,0,.2,1);}
+  .prob-num{font-family:var(--mono);font-size:.78rem;font-weight:500;min-width:38px;text-align:right;}
+  /* PILLS */
+  .pill{display:inline-flex;align-items:center;font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.06em;padding:3px 10px;border-radius:2px;border:1px solid;white-space:nowrap;}
+  .pill-green{color:var(--win);border-color:rgba(0,229,160,.4);background:rgba(0,229,160,.08);}
+  .pill-yellow{color:var(--push);border-color:rgba(255,209,102,.4);background:rgba(255,209,102,.08);}
+  .pill-red{color:var(--loss);border-color:rgba(255,77,106,.4);background:rgba(255,77,106,.08);}
+  .pill-blue{color:var(--accent3);border-color:rgba(77,158,255,.4);background:rgba(77,158,255,.08);}
+  .pill-orange{color:var(--accent2);border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.08);}
+  /* RANK */
+  .rank-num{font-family:var(--display);font-size:1.1rem;color:var(--muted);min-width:26px;display:inline-block;}
+  /* VULN BAR */
+  .vuln-wrap{display:flex;align-items:center;gap:6px;min-width:90px;}
+  .vuln-track{flex:1;height:4px;background:var(--border);border-radius:2px;position:relative;overflow:visible;}
+  .vuln-center{position:absolute;left:50%;top:-1px;width:1px;height:6px;background:var(--muted);}
+  .vuln-fill{position:absolute;height:100%;border-radius:2px;top:0;transition:all .5s ease;}
+  /* STATE */
+  .state-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:48px 24px;color:var(--muted);font-family:var(--mono);font-size:.78rem;letter-spacing:.05em;text-align:center;}
+  .state-msg .icon{font-size:1.8rem;}
+  .error-msg{color:var(--loss);}
+  .spin{width:22px;height:22px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  ::-webkit-scrollbar{width:5px;height:5px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+  @media(max-width:860px){.sidebar{display:none;}.stat-strip{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">Diamond<span>Edge</span></div>
+      <div class="logo-sub">MLB · Analytics</div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/"><span class="nav-icon">◈</span>Dashboard</a>
+      <div class="nav-section">Predictions</div>
+      <div class="nav-item active" id="nav-winners" onclick="switchTab('winners')"><span class="nav-icon">⬡</span>Game Winners</div>
+      <div class="nav-item" id="nav-strikeouts" onclick="switchTab('strikeouts')"><span class="nav-icon">⚡</span>Strikeouts</div>
+      <div class="nav-item" id="nav-homeruns" onclick="switchTab('homeruns')"><span class="nav-icon">◉</span>Home Runs</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div>⚾ DiamondEdge v2</div>
+      <div id="sidebar-date" style="margin-top:3px;"></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title" id="topbar-title">Game Winner Predictions</span>
+        <span class="badge badge-muted" id="topbar-count">—</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-refresh" id="btn-prev" onclick="shiftDate(-1)">‹ Prev</button>
+        <span class="badge badge-accent" id="topbar-date">—</span>
+        <button class="btn-refresh" id="btn-next" onclick="shiftDate(1)">Next ›</button>
+        <button class="btn-refresh" id="btn-refresh-wrap" onclick="refreshCurrent()">↺ Refresh</button>
+        <a class="btn-refresh" href="/" style="text-decoration:none;">← Dashboard</a>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-winners"    onclick="switchTab('winners')">⬡ Winners</button>
+        <button class="tab-btn"        id="tab-strikeouts" onclick="switchTab('strikeouts')">⚡ Strikeouts</button>
+        <button class="tab-btn"        id="tab-homeruns"   onclick="switchTab('homeruns')">◉ Home Runs</button>
+      </div>
+
+      <!-- WINNERS -->
+      <div class="tab-panel active" id="panel-winners">
+        <div class="stat-strip" id="winners-stats"></div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Today's Game Predictions</span>
+            <div class="card-actions"><span class="badge badge-blue" id="winners-count">—</span></div>
+          </div>
+          <div class="tbl-wrap">
+            <div id="winners-content"><div class="state-msg"><div class="spin"></div><div>Loading predictions…</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STRIKEOUTS -->
+      <div class="tab-panel" id="panel-strikeouts">
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header">
+            <span class="card-title">Model Signal Weights</span>
+            <span class="badge badge-accent">Hitter K-Vulnerability</span>
+          </div>
+          <div class="corr-strip">
+            <div class="corr-cell">
+              <div class="corr-bar" style="width:52px;background:var(--accent);"></div>
+              <span class="corr-label">Zone Contact% (60%)</span>
+              <span class="corr-r2" style="color:var(--accent)">R²=0.695</span>
+            </div>
+            <div class="corr-cell">
+              <div class="corr-bar" style="width:22px;background:var(--accent3);"></div>
+              <span class="corr-label">Whiff% Matchup (25%)</span>
+              <span class="corr-r2" style="color:var(--accent3)">pitch-type</span>
+            </div>
+            <div class="corr-cell">
+              <div class="corr-bar" style="width:26px;background:var(--push);"></div>
+              <span class="corr-label">Bat Speed → Whiff</span>
+              <span class="corr-r2" style="color:var(--push)">R²=0.331</span>
+            </div>
+            <div class="corr-cell">
+              <div class="corr-bar" style="width:8px;background:var(--muted);"></div>
+              <span class="corr-label">Chase% (15%)</span>
+              <span class="corr-r2" style="color:var(--muted2)">R²=0.060</span>
+            </div>
+          </div>
+        </div>
+        <div class="stat-strip" id="strikeouts-stats"></div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Pitcher Strikeout Predictions</span>
+            <div class="card-actions"><span class="badge badge-blue" id="strikeouts-count">—</span></div>
+          </div>
+          <div class="tbl-wrap">
+            <div id="strikeouts-content"><div class="state-msg"><span class="icon">⚡</span><div>Select tab to load</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOME RUNS -->
+      <div class="tab-panel" id="panel-homeruns">
+        <div class="stat-strip" id="homeruns-stats"></div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Home Run Probability Rankings</span>
+            <div class="card-actions"><span class="badge badge-blue" id="homeruns-count">—</span></div>
+          </div>
+          <div class="tbl-wrap">
+            <div id="homeruns-content"><div class="state-msg"><span class="icon">◉</span><div>Select tab to load</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REASON MODAL -->
+<div class="reason-modal" id="reason-modal" onclick="closeReason(event)">
+  <div class="reason-box">
+    <button class="reason-close" onclick="closeReason()">✕</button>
+    <div class="reason-box-matchup" id="rm-matchup"></div>
+    <div class="reason-box-meta" id="rm-meta"></div>
+    <div class="reason-box-label">Model Analysis</div>
+    <div class="reason-box-text" id="rm-text"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+const loaded   = { winners: false, strikeouts: false, homeruns: false };
+let currentTab = 'winners';
+
+// ── Date navigation ──────────────────────────────────────────────────────
+// viewDate is always a YYYY-MM-DD string in ET. Default = today.
+function etTodayStr() {
+  return new Date(Date.now() - 3 * 60 * 60 * 1000)
+    .toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+let viewDate = etTodayStr();
+
+function setViewDate(d) {
+  const todayStr = etTodayStr();
+  viewDate = d;
+  const isPast = viewDate < todayStr;
+  const dt = new Date(viewDate + 'T12:00:00');
+  const label = dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+  document.getElementById('topbar-date').textContent  = isPast ? label + ' (past)' : label;
+  document.getElementById('sidebar-date').textContent = label;
+  document.getElementById('btn-next').disabled = (viewDate >= todayStr);
+  document.getElementById('btn-refresh-wrap').style.display = isPast ? 'none' : '';
+  // Reset loaded flags and reload current tab
+  loaded.winners = false; loaded.strikeouts = false; loaded.homeruns = false;
+  if (currentTab === 'winners')    loadWinners();
+  if (currentTab === 'strikeouts') loadStrikeouts();
+  if (currentTab === 'homeruns')   loadHomeruns();
+}
+
+function shiftDate(delta) {
+  const dt = new Date(viewDate + 'T12:00:00');
+  dt.setDate(dt.getDate() + delta);
+  const next = dt.toISOString().slice(0, 10);
+  if (next > etTodayStr()) return;
+  setViewDate(next);
+}
+
+setViewDate(viewDate);
+
+const TITLES = {
+  winners:    'Game Winner Predictions',
+  strikeouts: 'Strikeout Predictions',
+  homeruns:   'Home Run Predictions',
+};
+
+// ─────────────────────────────────────────────
+// Tab switching
+// ─────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const nav = document.getElementById('nav-' + tab);
+  if (nav) nav.classList.add('active');
+  document.getElementById('topbar-title').textContent = TITLES[tab];
+  if (!loaded[tab]) {
+    if (tab === 'winners')    loadWinners();
+    if (tab === 'strikeouts') loadStrikeouts();
+    if (tab === 'homeruns')   loadHomeruns();
+  }
+}
+
+function refreshCurrent() {
+  loaded[currentTab] = false;
+  if (currentTab === 'winners')    loadWinners();
+  if (currentTab === 'strikeouts') loadStrikeouts();
+  if (currentTab === 'homeruns')   loadHomeruns();
+}
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function pillClass(val, lo, hi) {
+  return val >= hi ? 'pill-green' : val >= lo ? 'pill-yellow' : 'pill-red';
+}
+function errMsg(msg) {
+  return `<div class="state-msg error-msg"><span class="icon">⚠</span><div>${msg}</div></div>`;
+}
+function emptyMsg(msg) {
+  return `<div class="state-msg"><span class="icon">⚾</span><div>${msg}</div></div>`;
+}
+function updateCount(id, text) {
+  document.getElementById(id).textContent = text;
+  document.getElementById('topbar-count').textContent = text;
+}
+function statStrip(id, cells) {
+  document.getElementById(id).innerHTML = cells.map(c => `
+    <div class="stat-cell">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-val" style="color:${c.color || 'var(--text)'}">${c.val}</div>
+      ${c.sub ? `<div class="stat-sub">${c.sub}</div>` : ''}
+    </div>`).join('');
+}
+
+function makeSortable(tableEl) {
+  const headers = tableEl.querySelectorAll('thead th[data-sort]');
+  let sortCol = null, sortDir = -1;
+  headers.forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      sortDir = sortCol === col ? sortDir * -1 : -1;
+      sortCol = col;
+      headers.forEach(h => h.classList.remove('sort-asc','sort-desc'));
+      th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+      const tbody = tableEl.querySelector('tbody');
+      Array.from(tbody.querySelectorAll('tr'))
+        .sort((a, b) => {
+          const av = parseFloat(a.dataset[col] ?? a.cells[th.cellIndex].textContent.replace(/[^0-9.-]/g,''));
+          const bv = parseFloat(b.dataset[col] ?? b.cells[th.cellIndex].textContent.replace(/[^0-9.-]/g,''));
+          return (av - bv) * sortDir;
+        })
+        .forEach(r => tbody.appendChild(r));
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+// Winners
+// ─────────────────────────────────────────────
+async function loadWinners(forceQs) {
+  const el = document.getElementById('winners-content');
+  el.innerHTML = '<div class="state-msg"><div class="spin"></div><div>Loading…</div></div>';
+  document.getElementById('winners-stats').innerHTML = '';
+  loaded.winners = true;
+  try {
+    const todayStr = etTodayStr();
+    const qs = forceQs || (viewDate < todayStr ? `?date=${viewDate}` : '');
+    const data = await fetch('/api/predictions/winners' + qs).then(r => r.json());
+    if (data.error) { el.innerHTML = errMsg(data.error); return; }
+    if (!data.length) { el.innerHTML = emptyMsg('No predictions available. Ensure models are trained.'); return; }
+
+    updateCount('winners-count', data.length + ' games');
+    const highConf = data.filter(g => g.confidence >= 62).length;
+    const avgConf  = (data.reduce((s,g) => s + g.confidence, 0) / data.length).toFixed(1);
+    const avgTot   = (data.reduce((s,g) => s + (g.proj_total || 8.5), 0) / data.length).toFixed(1);
+    const top      = data.reduce((a,b) => a.confidence > b.confidence ? a : b);
+
+    statStrip('winners-stats', [
+      { label:'Games Today',    val:data.length,       color:'var(--accent3)', sub:`${highConf} high confidence` },
+      { label:'Avg Confidence', val:avgConf+'%',       color:'var(--accent)',  sub:'≥62% = high conf' },
+      { label:'Avg Proj Total', val:avgTot,            color:'var(--push)',    sub:'combined runs' },
+      { label:'Top Pick',       val:top.pick,          color:'var(--accent)',  sub:`${top.confidence.toFixed(1)}% confidence` },
+    ]);
+
+    const rows = data.map((g, i) => {
+      const confCls = pillClass(g.confidence, 55, 62);
+      const homeBar = Math.round(g.home_prob);
+      const icon    = g.confidence >= 62 ? '▲' : g.confidence >= 55 ? '–' : '▼';
+      const safeReason = g.reason
+        ? g.reason.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        : '';
+      return `<tr class="game-row" data-conf="${g.confidence}" data-total="${g.proj_total||0}">
+        <td><span class="rank-num">${i+1}</span></td>
+        <td>
+          <div class="matchup-cell">
+            <span class="team-chip">${g.away}</span>
+            <span class="vs-sep">@</span>
+            <span class="team-chip" style="background:rgba(77,158,255,.08);border-color:rgba(77,158,255,.25);color:var(--accent3);">${g.home}</span>
+          </div>
+          ${safeReason ? `<details class="reason-details"><summary>▶ Analysis</summary><p class="reason-text">${safeReason}</p></details>` : ''}
+        </td>
+        <td>
+          <div class="prob-wrap">
+            <div class="prob-track"><div class="prob-fill" style="width:${homeBar}%"></div></div>
+            <span class="prob-num" style="color:var(--accent3)">${g.home_prob.toFixed(1)}%</span>
+          </div>
+        </td>
+        <td class="mono" style="color:var(--muted2)">${g.away_prob.toFixed(1)}%</td>
+        <td><strong style="font-size:.88rem">${g.pick}</strong></td>
+        <td><span class="pill ${confCls}">${icon} ${g.confidence.toFixed(1)}%</span></td>
+        <td class="mono">${g.proj_total ? g.proj_total.toFixed(1) : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `<table id="tbl-winners">
+      <thead><tr>
+        <th style="width:36px">#</th>
+        <th>Matchup</th>
+        <th data-sort="conf">Home Win %</th>
+        <th>Away Win %</th>
+        <th>Pick</th>
+        <th data-sort="conf">Confidence</th>
+        <th data-sort="total">Proj Total</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    makeSortable(document.getElementById('tbl-winners'));
+  } catch(err) { el.innerHTML = errMsg('Network error: ' + err.message); }
+}
+
+// ─────────────────────────────────────────────
+// Strikeouts
+// ─────────────────────────────────────────────
+async function loadStrikeouts() {
+  const el = document.getElementById('strikeouts-content');
+  el.innerHTML = '<div class="state-msg"><div class="spin"></div><div>Loading…</div></div>';
+  document.getElementById('strikeouts-stats').innerHTML = '';
+  loaded.strikeouts = true;
+  try {
+    const qsSo = viewDate < etTodayStr() ? `?date=${viewDate}` : '';
+    const data = await fetch('/api/predictions/strikeouts' + qsSo).then(r => r.json());
+    if (data.error) { el.innerHTML = errMsg(data.error); return; }
+    if (!data.length) { el.innerHTML = emptyMsg('No strikeout predictions. Ensure the model is trained.'); return; }
+
+    updateCount('strikeouts-count', data.length + ' pitchers');
+    const topK    = data[0];
+    const avgK    = (data.reduce((s,p) => s + p.pred_k, 0) / data.length).toFixed(1);
+    const over8   = data.filter(p => p.pred_k >= 8).length;
+    const avgVuln = (data.reduce((s,p) => s + (p.lineup_vuln||0), 0) / data.length);
+
+    statStrip('strikeouts-stats', [
+      { label:'Top Arm',           val:topK.pitcher.split(' ').pop(), color:'var(--accent2)', sub:`${topK.pred_k.toFixed(1)} proj K · ${topK.team}` },
+      { label:"Avg Proj K's",      val:avgK,                          color:'var(--accent)',  sub:"across today's starters" },
+      { label:'8+ K Projections',  val:over8,                         color:'var(--accent3)', sub:'pitchers projected ≥8 K' },
+      { label:'Avg Lineup Vuln',   val:(avgVuln>=0?'+':'')+avgVuln.toFixed(2), color:avgVuln>0?'var(--accent2)':'var(--accent3)', sub:'zone contact adjusted' },
+    ]);
+
+    const rows = data.map((p, i) => {
+      const kCls     = p.pred_k >= 8.5 ? 'pill-green' : p.pred_k >= 6.5 ? 'pill-yellow' : 'pill-red';
+      const vuln     = p.lineup_vuln || 0;
+      const vSign    = vuln >= 0 ? '+' : '';
+      const vColor   = vuln > 0.2 ? 'var(--accent2)' : vuln < -0.2 ? 'var(--accent3)' : 'var(--muted2)';
+      const izC      = p.iz_contact_pct !== undefined ? p.iz_contact_pct.toFixed(1)+'%' : '—';
+      const expK     = p.exp_k_rate     !== undefined ? p.exp_k_rate.toFixed(1)+'%'     : '—';
+      // Vulnerability bar: 0=center, range ±1.5
+      const vulnPct  = Math.min(100, Math.max(0, ((vuln + 1.5) / 3.0) * 100));
+      const fillLeft = vuln >= 0 ? 50 : vulnPct;
+      const fillW    = Math.abs(vulnPct - 50);
+      const fillClr  = vuln >= 0 ? 'var(--accent2)' : 'var(--accent3)';
+
+      return `<tr data-predk="${p.pred_k}" data-vuln="${vuln}">
+        <td><span class="rank-num">${i+1}</span></td>
+        <td><strong style="font-size:.88rem">${p.pitcher}</strong></td>
+        <td><span class="team-chip">${p.team}</span></td>
+        <td><span class="team-chip" style="background:rgba(77,158,255,.08);border-color:rgba(77,158,255,.2);color:var(--muted2);">${p.opponent}</span></td>
+        <td><span class="pill ${kCls}" style="font-size:.82rem;font-weight:700;">${p.pred_k.toFixed(1)}</span></td>
+        <td class="mono" style="color:var(--muted2)">${p.k_pct ? p.k_pct.toFixed(1)+'%' : '—'}</td>
+        <td class="mono" style="color:var(--muted2)">${p.whiff_pct ? p.whiff_pct.toFixed(1)+'%' : '—'}</td>
+        <td class="mono" style="color:var(--muted2)">${p.chase_pct ? p.chase_pct.toFixed(1)+'%' : '—'}</td>
+        <td class="mono" title="In-zone contact% allowed — lower = pitcher suppresses contact = more Ks">${izC}</td>
+        <td class="mono">${expK}</td>
+        <td>
+          <div class="vuln-wrap">
+            <div class="vuln-track">
+              <div class="vuln-center"></div>
+              <div class="vuln-fill" style="left:${fillLeft}%;width:${fillW}%;background:${fillClr};"></div>
+            </div>
+            <span style="font-family:var(--mono);font-size:.72rem;color:${vColor};min-width:38px;text-align:right;">${vSign}${vuln.toFixed(2)}</span>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `<table id="tbl-strikeouts">
+      <thead><tr>
+        <th style="width:36px">#</th>
+        <th>Pitcher</th>
+        <th>Team</th>
+        <th>Opp</th>
+        <th data-sort="predk">Proj K's</th>
+        <th>Season K%</th>
+        <th>Whiff%</th>
+        <th>Chase%</th>
+        <th title="In-zone contact% allowed (lower = more Ks suppressed)">IZ-Contact%</th>
+        <th>Exp K%</th>
+        <th data-sort="vuln" title="Lineup K-vulnerability: zone contact R²=0.695 (60%), whiff matchup (25%), chase R²=0.060 (15%)">Lineup Vuln</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    makeSortable(document.getElementById('tbl-strikeouts'));
+  } catch(err) { el.innerHTML = errMsg('Network error: ' + err.message); }
+}
+
+// ─────────────────────────────────────────────
+// Home Runs
+// ─────────────────────────────────────────────
+async function loadHomeruns() {
+  const el = document.getElementById('homeruns-content');
+  el.innerHTML = '<div class="state-msg"><div class="spin"></div><div>Loading…</div></div>';
+  document.getElementById('homeruns-stats').innerHTML = '';
+  loaded.homeruns = true;
+  try {
+    const qsHr = viewDate < etTodayStr() ? `?date=${viewDate}` : '';
+    const data = await fetch('/api/predictions/homeruns' + qsHr).then(r => r.json());
+    if (data.error) { el.innerHTML = errMsg(data.error); return; }
+    if (!data.length) { el.innerHTML = emptyMsg('No home run predictions. Ensure the model is trained.'); return; }
+
+    updateCount('homeruns-count', data.length + ' players');
+    const topHR   = data[0];
+    const avgGame = (data.reduce((s,p) => s + (p.hr_prob_game||0), 0) / data.length).toFixed(1);
+    const over15  = data.filter(p => (p.hr_prob_game||0) >= 15).length;
+    const avgPark = (data.reduce((s,p) => s + (p.park_factor||1), 0) / data.length).toFixed(2);
+
+    statStrip('homeruns-stats', [
+      { label:'Top HR Threat',   val:topHR.batter.split(' ').pop(), color:'var(--accent2)', sub:`${topHR.hr_prob_game?topHR.hr_prob_game.toFixed(1):'—'}% game prob` },
+      { label:'Avg Game Prob',   val:avgGame+'%',                    color:'var(--accent)',  sub:'across ranked hitters' },
+      { label:'≥15% Prob',       val:over15,                         color:'var(--accent3)', sub:'high-probability HR spots' },
+      { label:'Avg Park Factor', val:avgPark+'×',                    color:'var(--push)',    sub:'>1.0 = hitter-friendly' },
+    ]);
+
+    const rows = data.map((p, i) => {
+      const probG   = p.hr_prob_game  || 0;
+      const probPA  = p.hr_prob_pa    || 0;
+      const parkF   = p.park_factor   || 1.0;
+      const wf      = p.weather_factor|| 1.0;
+      const probCls = probG >= 15 ? 'pill-green' : probG >= 10 ? 'pill-yellow' : 'pill-red';
+      const parkClr = parkF > 1.05 ? 'var(--win)' : parkF < 0.97 ? 'var(--loss)' : 'var(--muted2)';
+      const wfClr   = wf   > 1.05 ? 'var(--win)' : wf   < 0.97 ? 'var(--loss)' : 'var(--muted2)';
+      const barW    = Math.min(100, probG * 3.5);
+
+      return `<tr data-prob="${probG}" data-park="${parkF}">
+        <td><span class="rank-num">${i+1}</span></td>
+        <td><strong style="font-size:.88rem">${p.batter}</strong></td>
+        <td><span class="team-chip">${p.team}</span></td>
+        <td style="font-size:.8rem;color:var(--muted2);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.vs_pitcher||'—'}</td>
+        <td>
+          <div class="prob-wrap">
+            <div class="prob-track"><div class="prob-fill" style="width:${barW}%;background:var(--accent2)"></div></div>
+            <span class="pill ${probCls}">${probG.toFixed(1)}%</span>
+          </div>
+        </td>
+        <td class="mono" style="color:var(--muted2)">${probPA.toFixed(2)}%</td>
+        <td class="mono" style="color:${parkClr}">${parkF.toFixed(2)}×</td>
+        <td class="mono" style="color:${wfClr}">${wf.toFixed(2)}×</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `<table id="tbl-homeruns">
+      <thead><tr>
+        <th style="width:36px">#</th>
+        <th>Batter</th>
+        <th>Team</th>
+        <th>vs Pitcher</th>
+        <th data-sort="prob">Game HR Prob</th>
+        <th>Per PA Prob</th>
+        <th data-sort="park">Park Factor</th>
+        <th>Weather</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    makeSortable(document.getElementById('tbl-homeruns'));
+  } catch(err) { el.innerHTML = errMsg('Network error: ' + err.message); }
+}
+
+// ─────────────────────────────────────────────
+// Reason modal
+// ─────────────────────────────────────────────
+function showReason(i) {
+  const d = (window._winnerReasons || [])[i];
+  if (!d || !d.reason) return;
+  document.getElementById('rm-matchup').textContent = d.matchup;
+  document.getElementById('rm-meta').innerHTML =
+    '<span>Pick: <strong style="color:var(--text)">' + d.pick + '</strong></span>' +
+    '<span style="color:var(--muted)">|</span>' +
+    '<span>' + d.conf + '% confidence</span>';
+  document.getElementById('rm-text').textContent = d.reason;
+  document.getElementById('reason-modal').classList.add('open');
+}
+function closeReason(e) {
+  if (!e || e.target === document.getElementById('reason-modal'))
+    document.getElementById('reason-modal').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReason(); });
+
+// ─────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────
+loadWinners();
+</script>
+</body>
+</html>
