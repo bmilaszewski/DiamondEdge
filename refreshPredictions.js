@@ -1,0 +1,248 @@
+/**
+ * refreshPredictions.js
+ *
+ * The ONLY way to refresh existing predictions for today.
+ * Runs all three predictors (winners, strikeouts, home runs) with INSERT OR REPLACE,
+ * overwriting whatever is in the DB.
+ *
+ * Usage:
+ *   node refreshPredictions.js
+ *
+ * The server must be running. After saving to DB this script calls the server's
+ * internal cache-bust endpoint so the next page load picks up the fresh data.
+ */
+
+'use strict';
+
+const path   = require('path');
+const http   = require('http');
+const { spawn } = require('child_process');
+const db     = require('./db');
+
+const SERVER_PORT = 3000;
+
+// ── helpers ────────────────────────────────────────────────────────────────
+
+function etToday() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
+function runPython(script) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('python', [path.join(__dirname, script)], {
+      cwd: __dirname,
+      env: { ...process.env, PYTHONUNBUFFERED: '1' },
+    });
+    let out = '', err = '';
+    proc.stdout.on('data', d => { out += d; });
+    proc.stderr.on('data', d => { err += d; });
+    proc.on('error', reject);
+    proc.on('close', code => {
+      if (code !== 0) {
+        console.error(`[${script}] stderr:`, err.slice(0, 500));
+        return reject(new Error(`${script} exited ${code}`));
+      }
+      resolve(out);
+    });
+  });
+}
+
+function bustCache() {
+  return new Promise(resolve => {
+    const req = http.request(
+      { hostname: '127.0.0.1', port: SERVER_PORT, path: '/api/internal/bust-cache', method: 'POST' },
+      res => { res.resume(); res.on('end', resolve); }
+    );
+    req.on('error', () => {
+      console.warn('[refresh] Could not reach server to bust cache — restart the server to see changes.');
+      resolve();
+    });
+    req.end();
+  });
+}
+
+// ── parse helpers (mirrors server.js logic) ────────────────────────────────
+
+function parseWinners(raw) {
+  // Each prediction is a JSON object on its own line
+  const preds = [];
+  for (const line of raw.split('\n')) {
+    const t = line.trim();
+    if (!t.startsWith('{')) continue;
+    try { preds.push(JSON.parse(t)); } catch (_) {}
+  }
+  return preds;
+}
+
+function parseSO(raw) {
+  const preds = [];
+  for (const line of raw.split('\n')) {
+    const t = line.trim();
+    if (!t.startsWith('{')) continue;
+    try { preds.push(JSON.parse(t)); } catch (_) {}
+  }
+  return preds;
+}
+
+function parseHR(raw) {
+  const preds = [];
+  for (const line of raw.split('\n')) {
+    const t = line.trim();
+    if (!t.startsWith('{')) continue;
+    try { preds.push(JSON.parse(t)); } catch (_) {}
+  }
+  return preds;
+}
+
+// home/away flip using betting_odds as ground truth
+async function applyFlip(preds, date) {
+  if (!preds.length) return;
+  const rows = await new Promise(resolve =>
+    db.all(
+      `SELECT away_team, home_team FROM betting_odds
+       WHERE game_date=? AND market='h2h' AND home_ml IS NOT NULL`,
+      [date], (e, r) => resolve(r || [])
+    )
+  );
+  const oddsHome = {};
+  for (const r of rows) {
+    const canon = [r.away_team, r.home_team].sort().join('|');
+    if (!oddsHome[canon]) oddsHome[canon] = r.home_team;
+  }
+  for (const p of preds) {
+    const canon = [p.away, p.home].sort().join('|');
+    const correctHome = oddsHome[canon];
+    if (correctHome && correctHome !== p.home) {
+      [p.away, p.home]           = [p.home, p.away];
+      [p.home_prob, p.away_prob] = [p.away_prob, p.home_prob];
+      [p.home_sp,   p.away_sp]   = [p.away_sp,   p.home_sp];
+    }
+  }
+}
+
+// ── save functions ─────────────────────────────────────────────────────────
+
+async function saveWinners(preds, date) {
+  if (!preds.length) return 0;
+  await applyFlip(preds, date);
+  const stmt = db.prepare(
+    `INSERT OR REPLACE INTO game_predictions
+     (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,
+      proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side,reason)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?,
+       (SELECT reason FROM game_predictions
+        WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?))`
+  );
+  let saved = 0;
+  for (const p of preds) {
+    const gn = p.game_number || 1;
+    // Remove any stale opposite-direction row
+    db.run(
+      'DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
+      [date, gn, p.home, p.away]
+    );
+    stmt.run([
+      date, gn, p.away, p.home, p.pick, p.confidence,
+      p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
+      p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
+      p.same_side != null ? (p.same_side ? 1 : 0) : null,
+      date, gn, p.away, p.home,
+    ]);
+    saved++;
+  }
+  stmt.finalize();
+  return saved;
+}
+
+async function saveSO(preds, date) {
+  if (!preds.length) return 0;
+  const stmt = db.prepare(
+    `INSERT OR REPLACE INTO strikeout_predictions
+     (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
+      iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+  );
+  for (const p of preds) {
+    stmt.run([
+      date, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
+      p.whiff_pct || null, p.chase_pct || null, p.iz_contact_pct || null,
+      p.lineup_iz || null, p.lineup_chase || null, p.lineup_bat_speed || null,
+      p.lineup_vuln || null, p.exp_k_rate || null, p.data_quality || null,
+    ]);
+  }
+  stmt.finalize();
+  return preds.length;
+}
+
+async function saveHR(preds, date) {
+  if (!preds.length) return 0;
+  const stmt = db.prepare(
+    `INSERT OR REPLACE INTO homerun_predictions
+     (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
+      batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+  );
+  for (const p of preds) {
+    stmt.run([
+      date, p.batter, p.team, p.vs_pitcher || null,
+      p.hr_prob_per_pa ?? p.hr_prob_pa ?? null,
+      p.hr_prob_per_game ?? p.hr_prob_game ?? null,
+      p.park_factor || null, p.weather_factor || null,
+      p.batting_order || null, p.home_team || null, p.opponent || null,
+      p.temp_f || null, p.wind_mph || null, p.weather_cond || null,
+    ]);
+  }
+  stmt.finalize();
+  return preds.length;
+}
+
+// ── main ───────────────────────────────────────────────────────────────────
+
+async function main() {
+  const today = etToday();
+  console.log(`\nRefreshing all predictions for ${today}...\n`);
+
+  // Winners
+  process.stdout.write('  Running winner predictor...     ');
+  try {
+    const raw   = await runPython('predictorv4.py');
+    const preds = parseWinners(raw);
+    const n     = await saveWinners(preds, today);
+    console.log(`${n} game(s) saved`);
+  } catch (e) {
+    console.log(`FAILED — ${e.message}`);
+  }
+
+  // Strikeouts
+  process.stdout.write('  Running strikeout predictor...  ');
+  try {
+    const raw   = await runPython('strikeoutPredictorv2.py');
+    const preds = parseSO(raw);
+    const n     = await saveSO(preds, today);
+    console.log(`${n} pitcher(s) saved`);
+  } catch (e) {
+    console.log(`FAILED — ${e.message}`);
+  }
+
+  // Home runs
+  process.stdout.write('  Running home run predictor...   ');
+  try {
+    const raw   = await runPython('hrPredictor.py');
+    const preds = parseHR(raw);
+    const n     = await saveHR(preds, today);
+    console.log(`${n} batter(s) saved`);
+  } catch (e) {
+    console.log(`FAILED — ${e.message}`);
+  }
+
+  // Bust server caches so next page load reads fresh DB data
+  process.stdout.write('\n  Clearing server caches...       ');
+  await bustCache();
+  console.log('done');
+
+  console.log('\nDone. Refresh the page to see updated predictions.\n');
+  setTimeout(() => process.exit(0), 500);
+}
+
+// Wait for db.js to finish table creation before running
+setTimeout(main, 800);

@@ -1854,8 +1854,6 @@ app.get("/api/predictions/winners", async (req, res) => {
     const today = etToday();
     const reqDate = req.query.date || today;
     const isPast = reqDate < today;
-    const forceRefresh = req.query.refresh === '1';
-
     // Past dates: serve from DB only, never re-run the model
     if (isPast) {
       const saved = await new Promise(resolve =>
@@ -1870,147 +1868,63 @@ app.get("/api/predictions/winners", async (req, res) => {
       return res.json(saved);
     }
 
-    // Consume the lineup-changed flag atomically. When set, we bypass the DB
-    // cache and re-run the model, but save with INSERT OR IGNORE so in-progress
-    // or finished game picks are never overwritten — only missing games are added.
-    const needFreshRun = lineupsChangedAt > 0;
-    if (needFreshRun) lineupsChangedAt = 0;
-
-    // 1. Memory cache (skip if force-refresh or lineup just changed)
-    if (!forceRefresh && !needFreshRun && predictionsCache.winners.data && predictionsCache.winners.date === today) {
+    // 1. Memory cache
+    if (predictionsCache.winners.data && predictionsCache.winners.date === today) {
       return res.json(predictionsCache.winners.data);
     }
 
-    // 2. DB cache — if predictions already exist for today, use them without re-running
-    // the model. Skipped when lineups just changed (needFreshRun) so we pick up new games.
-    // Always filters by readiness so stale predictions for unconfirmed lineups are excluded.
-    if (!forceRefresh && !needFreshRun) {
-      const saved = await new Promise(resolve =>
-        db.all(
-          `SELECT away_team AS away, home_team AS home, pick, confidence,
-                  game_number, home_prob, away_prob, proj_total, home_sp, away_sp,
-                  model_prob, vegas_implied, edge, same_side, reason
-           FROM game_predictions WHERE game_date = ? ORDER BY confidence DESC`,
-          [today], (err, rows) => resolve(err ? [] : (rows || []))
-        )
-      );
-      if (saved.length) {
-        await enrichWithScheduleSP(saved, today);
-        predictionsCache.winners = { data: saved, date: today };
-        return res.json(saved);
-      }
+    // 2. DB — if predictions exist for today, serve them.
+    //    Predictions are only re-run by refreshPredictions.js; the server never
+    //    re-runs the model once predictions exist for the day.
+    const savedWinners = await new Promise(resolve =>
+      db.all(
+        `SELECT away_team AS away, home_team AS home, pick, confidence,
+                game_number, home_prob, away_prob, proj_total, home_sp, away_sp,
+                model_prob, vegas_implied, edge, same_side, reason
+         FROM game_predictions WHERE game_date = ? ORDER BY confidence DESC`,
+        [today], (err, rows) => resolve(err ? [] : (rows || []))
+      )
+    );
+    if (savedWinners.length) {
+      await enrichWithScheduleSP(savedWinners, today);
+      predictionsCache.winners = { data: savedWinners, date: today };
+      return res.json(savedWinners);
     }
 
-    // 3. No saved predictions (or force-refresh) — run the model
+    // 3. No predictions yet today — run the model for the first time.
     await fetchAndCacheSchedule(today).catch(() => {});
     const output = await runPythonPredictor('predictorv4.py');
     const predictions = parseWinnerPredictions(output);
 
-    // Fix home/away direction using betting_odds as ground truth.
     await applyHomeAwayFlip(predictions, today);
 
     if (!predictions.length) {
-      // Model returned nothing — serve DB without purging.
-      const saved = await new Promise(resolve =>
-        db.all(
-          `SELECT away_team AS away, home_team AS home, pick, confidence,
-                  game_number, home_prob, away_prob, proj_total, home_sp, away_sp,
-                  model_prob, vegas_implied, edge, same_side, reason
-           FROM game_predictions WHERE game_date = ? ORDER BY confidence DESC`,
-          [today], (err, rows) => resolve(err ? [] : (rows || []))
-        )
-      );
-      if (saved.length) {
-        await enrichWithScheduleSP(saved, today);
-        predictionsCache.winners = { data: saved, date: today };
-        return res.json(saved);
-      }
       return res.json([]);
     }
 
-    // Persist — use REPLACE on manual refresh for PRE-GAME predictions only.
-    // Games that have already started or finished are always OR IGNORE'd so the
-    // original pick is never overwritten after the game begins.
-    // When replacing pre-game picks, preserve any existing reason via subquery.
+    // First run of the day — save with INSERT OR IGNORE (never overwrite).
     try {
-      // Fetch live scores (10s cache — cheap) to identify started/finished games.
-      const liveScores = await fetchEspnScores(today).catch(() => ({}));
-      const startedKeys = new Set();
-      for (const [k, v] of Object.entries(liveScores)) {
-        if (v.state === 'in' || v.state === 'post') {
-          startedKeys.add(k);
-          // Also add the reversed HOME@AWAY variant so we catch any flipped predictions.
-          const atIdx    = k.indexOf('@');
-          const colonIdx = k.indexOf(':');
-          const sfx      = colonIdx >= 0 ? k.slice(colonIdx) : '';
-          if (atIdx >= 0) {
-            const away = k.slice(0, atIdx);
-            const home = k.slice(atIdx + 1, colonIdx >= 0 ? colonIdx : undefined);
-            startedKeys.add(home + '@' + away + sfx);
-          }
-        }
-      }
-
-      const stmtReplace = db.prepare(
-        `INSERT OR REPLACE INTO game_predictions
-         (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,proj_total,home_sp,away_sp,
-          model_prob,vegas_implied,edge,same_side,reason)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?,
-           (SELECT reason FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?))`
-      );
-      const stmtIgnore = db.prepare(
+      const stmt = db.prepare(
         `INSERT OR IGNORE INTO game_predictions
          (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,proj_total,home_sp,away_sp,
           model_prob,vegas_implied,edge,same_side)
          VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?)`
       );
-
       for (const p of predictions) {
-        const gn      = p.game_number || 1;
-        const sfx     = gn > 1 ? ':' + gn : '';
-        const gameKey = p.away + '@' + p.home + sfx;
-        // Delete any stale opposite-direction row for this team pair so duplicates can't accumulate.
+        const gn = p.game_number || 1;
         db.run('DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
           [today, gn, p.home, p.away]);
-        // Only replace if the user explicitly asked AND the game hasn't started yet.
-        const useReplace = forceRefresh && !startedKeys.has(gameKey);
-        const base = [today, gn, p.away, p.home, p.pick, p.confidence,
-                      p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
-                      p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
-                      p.same_side != null ? (p.same_side ? 1 : 0) : null];
-        if (useReplace) {
-          stmtReplace.run([...base, today, gn, p.away, p.home]);
-        } else {
-          stmtIgnore.run(base);
-        }
+        stmt.run([today, gn, p.away, p.home, p.pick, p.confidence,
+                  p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
+                  p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
+                  p.same_side != null ? (p.same_side ? 1 : 0) : null]);
       }
-      stmtReplace.finalize();
-      stmtIgnore.finalize();
+      stmt.finalize();
     } catch (saveErr) {
       console.error('[save predictions]', saveErr.message);
     }
 
-    // Generate reasons in background — force-regen on manual refresh so
-    // stat-driven reasons replace any old template-based ones.
-    generatePickReasons(predictions, today, forceRefresh).catch(() => {});
-
-    // When triggered by a lineup change (needFreshRun), re-query the DB so the
-    // response includes both newly-inserted games AND any existing predictions
-    // for in-progress/finished games that OR IGNORE preserved.
-    if (needFreshRun) {
-      const merged = await new Promise(resolve =>
-        db.all(
-          `SELECT away_team AS away, home_team AS home, pick, confidence,
-                  game_number, home_prob, away_prob, proj_total, home_sp, away_sp,
-                  model_prob, vegas_implied, edge, same_side, reason
-           FROM game_predictions WHERE game_date = ? ORDER BY confidence DESC`,
-          [today], (err, rows) => resolve(err ? [] : (rows || []))
-        )
-      );
-      await enrichWithScheduleSP(merged, today);
-      predictionsCache.winners = { data: merged, date: today };
-      return res.json(merged);
-    }
+    generatePickReasons(predictions, today).catch(() => {});
 
     await enrichWithScheduleSP(predictions, today);
     predictionsCache.winners = { data: predictions, date: today };
@@ -2040,50 +1954,50 @@ app.get("/api/predictions/strikeouts", async (req, res) => {
       return res.json(saved);
     }
 
-    // Today: use memory cache, then run model, then DB fallback
+    // 1. Memory cache
     if (predictionsCache.strikeouts.data && predictionsCache.strikeouts.date === today) {
       return res.json(predictionsCache.strikeouts.data);
     }
 
+    // 2. DB — serve existing predictions without re-running the model.
+    const savedSO = await new Promise(resolve =>
+      db.all(
+        `SELECT pitcher, team, opponent, pred_k, k_pct, whiff_pct, chase_pct,
+                iz_contact_pct, lineup_iz, lineup_chase, lineup_bat_speed,
+                lineup_vuln, exp_k_rate, data_quality
+         FROM strikeout_predictions WHERE game_date = ? ORDER BY pred_k DESC`,
+        [today], (err, rows) => resolve(err ? [] : (rows || []))
+      )
+    );
+    if (savedSO.length) {
+      predictionsCache.strikeouts = { data: savedSO, date: today };
+      return res.json(savedSO);
+    }
+
+    // 3. No predictions yet today — run the model for the first time.
     const output = await runPythonPredictor('strikeoutPredictorv2.py');
     const predictions = parseStrikeoutPredictions(output);
 
-    if (!predictions.length) {
-      const saved = await new Promise(resolve =>
-        db.all(
-          `SELECT pitcher, team, opponent, pred_k, k_pct, whiff_pct, chase_pct,
-                  iz_contact_pct, lineup_iz, lineup_chase, lineup_bat_speed,
-                  lineup_vuln, exp_k_rate, data_quality
-           FROM strikeout_predictions WHERE game_date = ? ORDER BY pred_k DESC`,
-          [today], (err, rows) => resolve(err ? [] : (rows || []))
-        )
+    if (!predictions.length) { return res.json([]); }
+
+    try {
+      const stmt = db.prepare(
+        `INSERT OR IGNORE INTO strikeout_predictions
+         (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
+          iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       );
-      if (saved.length) {
-        predictionsCache.strikeouts = { data: saved, date: today };
-        return res.json(saved);
+      for (const p of predictions) {
+        stmt.run([today, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
+                  p.whiff_pct||null, p.chase_pct||null, p.iz_contact_pct||null,
+                  p.lineup_iz||null, p.lineup_chase||null, p.lineup_bat_speed||null,
+                  p.lineup_vuln||null, p.exp_k_rate||null, p.data_quality||null]);
       }
-    }
+      stmt.finalize();
+    } catch (saveErr) { console.error('[save strikeouts]', saveErr.message); }
 
     predictionsCache.strikeouts = { data: predictions, date: today };
     res.json(predictions);
-
-    if (predictions.length) {
-      try {
-        const stmt = db.prepare(
-          `INSERT OR REPLACE INTO strikeout_predictions
-           (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
-            iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-        );
-        for (const p of predictions) {
-          stmt.run([today, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
-                    p.whiff_pct||null, p.chase_pct||null, p.iz_contact_pct||null,
-                    p.lineup_iz||null, p.lineup_chase||null, p.lineup_bat_speed||null,
-                    p.lineup_vuln||null, p.exp_k_rate||null, p.data_quality||null]);
-        }
-        stmt.finalize();
-      } catch (saveErr) { console.error('[save strikeouts]', saveErr.message); }
-    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2107,49 +2021,49 @@ app.get("/api/predictions/homeruns", async (req, res) => {
       return res.json(groupHomeruns(saved));
     }
 
-    // Today: use memory cache, then run model, then DB fallback
+    // 1. Memory cache
     if (predictionsCache.homeruns.data && predictionsCache.homeruns.date === today) {
       return res.json(predictionsCache.homeruns.data);
     }
 
+    // 2. DB — serve existing predictions without re-running the model.
+    const savedHR = await new Promise(resolve =>
+      db.all(`SELECT ${dbCols} FROM homerun_predictions WHERE game_date = ?`, [today],
+        (err, rows) => resolve(err ? [] : (rows || [])))
+    );
+    if (savedHR.length) {
+      const grouped = groupHomeruns(savedHR);
+      predictionsCache.homeruns = { data: grouped, date: today };
+      return res.json(grouped);
+    }
+
+    // 3. No predictions yet today — run the model for the first time.
     const output = await runPythonPredictor('hrPredictor.py');
     const flat   = parseHomerunPredictions(output);
 
-    if (!flat.length) {
-      const saved = await new Promise(resolve =>
-        db.all(`SELECT ${dbCols} FROM homerun_predictions WHERE game_date = ?`, [today],
-          (err, rows) => resolve(err ? [] : (rows || [])))
+    if (!flat.length) { return res.json([]); }
+
+    try {
+      const stmt = db.prepare(
+        `INSERT OR IGNORE INTO homerun_predictions
+         (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
+          batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       );
-      if (saved.length) {
-        const grouped = groupHomeruns(saved);
-        predictionsCache.homeruns = { data: grouped, date: today };
-        return res.json(grouped);
+      for (const p of flat) {
+        stmt.run([today, p.batter, p.team, p.vs_pitcher||null,
+                  p.hr_prob_per_pa ?? p.hr_prob_pa ?? null,
+                  p.hr_prob_per_game ?? p.hr_prob_game ?? null,
+                  p.park_factor||null, p.weather_factor||null,
+                  p.batting_order||null, p.home_team||null, p.opponent||null,
+                  p.temp_f||null, p.wind_mph||null, p.weather_cond||null]);
       }
-    }
+      stmt.finalize();
+    } catch (saveErr) { console.error('[save homeruns]', saveErr.message); }
 
     const grouped = groupHomeruns(flat);
     predictionsCache.homeruns = { data: grouped, date: today };
     res.json(grouped);
-
-    if (flat.length) {
-      try {
-        const stmt = db.prepare(
-          `INSERT OR REPLACE INTO homerun_predictions
-           (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
-            batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-        );
-        for (const p of flat) {
-          const hrPa   = p.hr_prob_per_pa   ?? p.hr_prob_pa   ?? null;
-          const hrGame = p.hr_prob_per_game  ?? p.hr_prob_game ?? null;
-          stmt.run([today, p.batter, p.team, p.vs_pitcher||null,
-                    hrPa, hrGame, p.park_factor||null, p.weather_factor||null,
-                    p.batting_order||null, p.home_team||null, p.opponent||null,
-                    p.temp_f||null, p.wind_mph||null, p.weather_cond||null]);
-        }
-        stmt.finalize();
-      } catch (saveErr) { console.error('[save homeruns]', saveErr.message); }
-    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2574,6 +2488,21 @@ app.get("/api/units/weekly", async (req, res) => {
 });
 
 
+// Internal endpoint for refreshPredictions.js to bust caches after writing new DB data.
+// Restricted to localhost — external callers receive 403.
+app.post('/api/internal/bust-cache', (req, res) => {
+  const ip = req.ip || req.socket?.remoteAddress || '';
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  predictionsCache.winners    = { data: null, date: null };
+  predictionsCache.strikeouts = { data: null, date: null };
+  predictionsCache.homeruns   = { data: null, date: null };
+  dataVersion.predictions = Date.now();
+  console.log('[refresh] Prediction caches cleared by refreshPredictions.js');
+  res.json({ ok: true });
+});
+
 app.listen(3000, () => {
   console.log("⚾  MLB Dashboard running → http://localhost:3000");
   // Only purge stale predictions at startup if lineups are already imported for today.
@@ -2696,7 +2625,7 @@ async function runAndSavePredictions() {
     const soPreds = parseStrikeoutPredictions(soOutput);
     if (soPreds.length) {
       const stmt = db.prepare(
-        `INSERT OR REPLACE INTO strikeout_predictions
+        `INSERT OR IGNORE INTO strikeout_predictions
          (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
           iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
@@ -2719,7 +2648,7 @@ async function runAndSavePredictions() {
     const hrFlat = parseHomerunPredictions(hrOutput);
     if (hrFlat.length) {
       const stmt = db.prepare(
-        `INSERT OR REPLACE INTO homerun_predictions
+        `INSERT OR IGNORE INTO homerun_predictions
          (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
           batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
