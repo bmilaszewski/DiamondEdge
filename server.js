@@ -1812,9 +1812,19 @@ async function applyHomeAwayFlip(preds, date) {
     const canon = [p.away, p.home].sort().join('|');
     const correctHome = oddsHome[canon];
     if (correctHome && correctHome !== p.home) {
-      [p.away, p.home]           = [p.home, p.away];
-      [p.home_prob, p.away_prob] = [p.away_prob, p.home_prob];
-      [p.home_sp, p.away_sp]     = [p.away_sp, p.home_sp];
+      [p.away, p.home]                     = [p.home, p.away];
+      [p.home_prob, p.away_prob]           = [p.away_prob, p.home_prob];
+      [p.home_sp, p.away_sp]               = [p.away_sp, p.home_sp];
+      [p.home_era, p.away_era]             = [p.away_era, p.home_era];
+      [p.home_sp_era_l5, p.away_sp_era_l5] = [p.away_sp_era_l5, p.home_sp_era_l5];
+      [p.home_rdiff_30, p.away_rdiff_30]   = [p.away_rdiff_30, p.home_rdiff_30];
+      [p.home_rdiff_15, p.away_rdiff_15]   = [p.away_rdiff_15, p.home_rdiff_15];
+      [p.home_wpct_30, p.away_wpct_30]     = [p.away_wpct_30, p.home_wpct_30];
+      [p.home_lineup_ops, p.away_lineup_ops] = [p.away_lineup_ops, p.home_lineup_ops];
+      [p.home_win_streak, p.away_win_streak] = [p.away_win_streak, p.home_win_streak];
+      [p.home_loss_streak, p.away_loss_streak] = [p.away_loss_streak, p.home_loss_streak];
+      [p.home_ewm_rdiff, p.away_ewm_rdiff] = [p.away_ewm_rdiff, p.home_ewm_rdiff];
+      [p.home_wpct_trend, p.away_wpct_trend] = [p.away_wpct_trend, p.home_wpct_trend];
     }
   }
   return preds;
