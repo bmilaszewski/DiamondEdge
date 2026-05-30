@@ -14,10 +14,11 @@
  * endpoint so the next page load picks up the fresh data immediately.
  */
 
-const path       = require('path');
-const http       = require('http');
-const { spawn }  = require('child_process');
-const db         = require('./db');
+const path                = require('path');
+const http                = require('http');
+const { spawn }           = require('child_process');
+const db                  = require('./db');
+const { generateReason }  = require('./reasonEngine');
 
 const SERVER_PORT = 3000;
 
@@ -236,6 +237,29 @@ function saveHR(preds, date) {
   });
 }
 
+function saveReasons(preds, date) {
+  if (!preds.length) return Promise.resolve(0);
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      let saved = 0;
+      for (const p of preds) {
+        // Ensure game_date is set so the reason seed hash is stable
+        p.game_date = date;
+        const reason = generateReason(p);
+        if (!reason) continue;
+        db.run(
+          `UPDATE game_predictions SET reason = ?
+           WHERE game_date = ? AND away_team = ? AND home_team = ? AND game_number = ?`,
+          [reason, date, p.away, p.home, p.game_number || 1],
+          function(err) { if (!err && this.changes > 0) saved++; }
+        );
+      }
+      // Use a no-op run at the end so we can hook its callback as a flush point
+      db.run('SELECT 1', [], err => err ? reject(err) : resolve(saved));
+    });
+  });
+}
+
 // ── main ───────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -247,7 +271,8 @@ async function main() {
     const raw   = await runPython('predictorv4.py');
     const preds = parseWinners(raw);
     const n     = await saveWinners(preds, today);
-    console.log(`${n} game(s) saved`);
+    const r     = await saveReasons(preds, today);
+    console.log(`${n} game(s) saved, ${r} reason(s) written`);
   } catch (e) {
     console.log(`FAILED — ${e.message}`);
   }
