@@ -1975,7 +1975,7 @@ app.get("/api/predictions/strikeouts", async (req, res) => {
       db.all(
         `SELECT pitcher, team, opponent, pred_k, k_pct, whiff_pct, chase_pct,
                 iz_contact_pct, lineup_iz, lineup_chase, lineup_bat_speed,
-                lineup_vuln, exp_k_rate, data_quality
+                lineup_vuln, exp_k_rate, data_quality, dk_line, dk_over_odds, dk_under_odds
          FROM strikeout_predictions WHERE game_date = ? ORDER BY pred_k DESC`,
         [today], (err, rows) => resolve(err ? [] : (rows || []))
       )
