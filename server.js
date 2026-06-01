@@ -2020,7 +2020,8 @@ app.get("/api/predictions/homeruns", async (req, res) => {
     const isPast   = reqDate < today;
 
     const dbCols = `batter, team, vs_pitcher, hr_prob_pa, hr_prob_game, park_factor,
-                    weather_factor, batting_order, home_team, opponent, temp_f, wind_mph, weather_cond`;
+                    weather_factor, batting_order, home_team, opponent, temp_f, wind_mph, weather_cond,
+                    dk_hr_odds`;
 
     // Past dates: only serve from DB, never re-run the model
     if (isPast) {
@@ -2079,10 +2080,8 @@ app.get("/api/predictions/homeruns", async (req, res) => {
   }
 });
 
-// ── DraftKings pitcher K prop lines ──────────────────────────────────────────
-// Fetches today's pitcher strikeout over/under lines from ESPN's DraftKings
-// props feed and writes them into strikeout_predictions.dk_line.
-async function fetchPitcherKProps(date) {
+// (DK pitcher K lines and batter HR odds are fetched by importBettingOdds.js)
+async function _unused_fetchPitcherKProps(date) {
   if (!nodeFetch) return;
   const dateCompact = date.replace(/-/g, '');
   const HEADERS = {
@@ -2686,11 +2685,6 @@ app.listen(3000, () => {
     });
   }, 2000); // 2s delay so the server finishes binding before heavy I/O starts
 
-  // Fetch DK pitcher K lines in background after predictions are likely ready
-  setTimeout(() => {
-    fetchPitcherKProps(etToday()).catch(e =>
-      console.log('[K props] startup fetch error:', e.message));
-  }, 15000);
 });
 
 const { generateReason } = require('./reasonEngine');

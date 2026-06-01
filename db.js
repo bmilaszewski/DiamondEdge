@@ -441,6 +441,8 @@ db.serialize(() => {
   db.run(`ALTER TABLE strikeout_predictions ADD COLUMN dk_line REAL`, () => {});
   db.run(`ALTER TABLE strikeout_predictions ADD COLUMN dk_over_odds INTEGER`, () => {});
   db.run(`ALTER TABLE strikeout_predictions ADD COLUMN dk_under_odds INTEGER`, () => {});
+  // DraftKings batter HR prop odds (added 2026-06)
+  db.run(`ALTER TABLE homerun_predictions ADD COLUMN dk_hr_odds INTEGER`, () => {});
 
   console.log("All tables ready.");
 });

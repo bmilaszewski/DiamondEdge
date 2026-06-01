@@ -3,25 +3,52 @@
 /**
  * importBettingOdds.js
  *
- * Fetches MLB pregame odds from ESPN's public odds API (the same data shown
- * on espn.com/mlb/odds, provided by DraftKings and other books).
+ * Fetches today's DraftKings MLB odds + player props from OddsAPI:
+ *   - Game odds (h2h, spreads, totals)  → betting_odds table
+ *   - Pitcher strikeout K lines          → strikeout_predictions.dk_line
+ *   - Batter HR to-homer odds            → homerun_predictions.dk_hr_odds
  *
- * USAGE:
- *   node importBettingOdds.js                   (today's odds)
- *   node importBettingOdds.js --date 2026-04-30 (specific date)
+ * Usage:
+ *   node importBettingOdds.js                   (today's date ET)
+ *   node importBettingOdds.js --date 2026-05-01 (specific date)
  */
 
 const db    = require("./db");
 const fetch = require("node-fetch").default;
+const fs    = require("fs");
+const path  = require("path");
 
-// ─── CLI ─────────────────────────────────────────────────────────────────────
-const args       = process.argv.slice(2);
-const dateIdx    = args.indexOf("--date");
+// ─── API key ──────────────────────────────────────────────────────────────────
+const ODDS_API_KEY = (() => {
+  for (const name of ["oddsAPI.env", ".env"]) {
+    const p = path.join(__dirname, name);
+    try {
+      if (fs.existsSync(p)) {
+        for (const line of fs.readFileSync(p, "utf8").split(/\r?\n/)) {
+          const eq = line.indexOf("=");
+          if (eq > 0) {
+            const k = line.slice(0, eq).trim();
+            const v = line.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+            if (k === "ODDS_API_KEY" && v) return v;
+          }
+        }
+      }
+    } catch(_) {}
+  }
+  return process.env.ODDS_API_KEY || null;
+})();
+
+if (!ODDS_API_KEY) {
+  console.error("No ODDS_API_KEY found in oddsAPI.env or .env");
+  process.exit(1);
+}
+
+// ─── CLI ──────────────────────────────────────────────────────────────────────
+const args      = process.argv.slice(2);
+const dateIdx   = args.indexOf("--date");
 const targetDate = dateIdx !== -1
   ? args[dateIdx + 1]
-  : new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" })
-      .format(new Date(Date.now() - 3 * 60 * 60 * 1000));
-const dateCompact = targetDate.replace(/-/g, "");
+  : new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 const run = (sql, p = []) => new Promise((res, rej) =>
@@ -68,198 +95,225 @@ function norm(name) {
   return null;
 }
 
-function americanToProb(ml) {
+function mlToProb(ml) {
   const n = parseInt(ml);
   if (isNaN(n)) return null;
   return n > 0 ? 100 / (n + 100) : Math.abs(n) / (Math.abs(n) + 100);
 }
 
-// ─── ESPN Odds ────────────────────────────────────────────────────────────────
-async function fetchEspn() {
-  const HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "application/json, text/plain, */*",
-    "Origin": "https://www.espn.com",
-    "Referer": "https://www.espn.com/mlb/odds",
-  };
-
-  let events;
-  try {
-    const res = await fetch(
-      `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${dateCompact}&limit=30`,
-      { headers: HEADERS, timeout: 15000 }
-    );
-    if (!res.ok) { console.log(`  ❌ Scoreboard HTTP ${res.status}`); return []; }
-    events = (await res.json()).events || [];
-  } catch (e) { console.log(`  ❌ ${e.message}`); return []; }
-
-  if (!events.length) { console.log("  No games found"); return []; }
-  console.log(`  ${events.length} games found, fetching odds...`);
-
-  const rows = [];
-  const seenPairs = {};  // tracks game number for doubleheaders
-
-  for (const event of events) {
-    const comp = (event.competitions || [])[0];
-    if (!comp) continue;
-
-    const gameId   = event.id;
-    const gameDate = (event.date || "").split("T")[0] || targetDate;
-    const gameTimeET = event.date
-      ? new Date(event.date).toLocaleTimeString("en-US", {
-          timeZone: "America/New_York", hour: "numeric", minute: "2-digit"
-        }) + " ET"
-      : null;
-
-    let homeTeam = null, awayTeam = null;
-    for (const c of (comp.competitors || [])) {
-      const t = norm(c.team?.displayName || c.team?.name || "") || norm(c.team?.abbreviation || "");
-      if (c.homeAway === "home") homeTeam = t;
-      else awayTeam = t;
-    }
-    if (!homeTeam || !awayTeam) continue;
-
-    // Assign game_number before any skip so doubleheader G2 always gets gameNumber=2
-    const pairId = awayTeam + "|" + homeTeam;
-    seenPairs[pairId] = (seenPairs[pairId] || 0) + 1;
-    const gameNumber = seenPairs[pairId];
-
-    // Attempt all games — ESPN serves the closing pregame line even after games
-    // complete. The DraftKings-only + ±500 saneML filters below reject any
-    // live-adjusted lines. INSERT OR IGNORE protects any odds already in the DB.
-
-    // Fetch odds detail for this event
-    let oddsItems = [];
-    const oddsRef = comp.odds?.$ref || comp.odds?.ref;
-    const oddsUrl = oddsRef ||
-      `https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb/events/${gameId}/competitions/${gameId}/odds`;
-
-    try {
-      const ores = await fetch(oddsUrl, { headers: HEADERS, timeout: 10000 });
-      if (ores.ok) {
-        const odata = await ores.json();
-        oddsItems = odata.items || [];
-        if (oddsItems.length > 0 && oddsItems[0].$ref) {
-          const fetched = [];
-          for (const item of oddsItems.slice(0, 8)) {
-            try {
-              const ir = await fetch(item.$ref, { headers: HEADERS, timeout: 8000 });
-              if (ir.ok) fetched.push(await ir.json());
-            } catch (_) {}
-            await new Promise(r => setTimeout(r, 100));
-          }
-          oddsItems = fetched;
-        }
-      }
-    } catch (_) {}
-
-    if (!oddsItems.length && comp.odds && !comp.odds.$ref)
-      oddsItems = Array.isArray(comp.odds) ? comp.odds : [comp.odds];
-
-    for (const odds of oddsItems) {
-      if (!odds || typeof odds !== "object") continue;
-
-      const bookmaker = odds.provider?.name || odds.provider?.abbreviation || "ESPN";
-
-      // Only accept DraftKings pregame odds — reject other books and live-labeled lines
-      if (!/^draftkings$/i.test(bookmaker)) continue;
-
-      const homeML = parseInt(odds.homeTeamOdds?.moneyLine ?? odds.homeTeamOdds?.price ?? "");
-      const awayML = parseInt(odds.awayTeamOdds?.moneyLine ?? odds.awayTeamOdds?.price ?? "");
-      const total  = parseFloat(odds.overUnder ?? odds.total ?? "");
-      const spread = parseFloat(odds.spread ?? odds.homeTeamOdds?.pointSpread ?? "");
-
-      // Sanity check: pregame MLB moneylines are always within ±500.
-      // Live in-game lines frequently exceed this when a team is winning big.
-      const saneML = !isNaN(homeML) && !isNaN(awayML)
-        && Math.abs(homeML) >= 100 && Math.abs(awayML) >= 100
-        && Math.abs(homeML) <= 500 && Math.abs(awayML) <= 500;
-
-      // All three markets are gated on saneML — if the ML is live-adjusted, the
-      // spread and total from the same provider are also unreliable.
-      if (!saneML) continue;
-
-      rows.push({
-        game_date: gameDate, home_team: homeTeam, away_team: awayTeam, game_number: gameNumber,
-        source: "espn", bookmaker, market: "h2h",
-        home_ml: homeML, away_ml: awayML,
-        home_prob: americanToProb(homeML), away_prob: americanToProb(awayML),
-        home_spread: null, home_spread_odds: null, away_spread: null, away_spread_odds: null,
-        total_line: null, over_odds: null, under_odds: null, game_time: gameTimeET,
-      });
-
-      if (!isNaN(spread)) {
-        const hso = parseInt(odds.homeTeamOdds?.spreadOdds ?? odds.homeTeamOdds?.handicapOdds ?? "-110");
-        const aso = parseInt(odds.awayTeamOdds?.spreadOdds ?? odds.awayTeamOdds?.handicapOdds ?? "-110");
-        rows.push({
-          game_date: gameDate, home_team: homeTeam, away_team: awayTeam, game_number: gameNumber,
-          source: "espn", bookmaker, market: "spreads",
-          home_ml: null, away_ml: null, home_prob: null, away_prob: null,
-          home_spread: spread, home_spread_odds: isNaN(hso) ? -110 : hso,
-          away_spread: -spread, away_spread_odds: isNaN(aso) ? -110 : aso,
-          total_line: null, over_odds: null, under_odds: null, game_time: gameTimeET,
-        });
-      }
-
-      if (!isNaN(total) && total > 0) {
-        const oo = parseInt(odds.overOdds ?? odds.overPrice ?? "-110");
-        const uo = parseInt(odds.underOdds ?? odds.underPrice ?? "-110");
-        rows.push({
-          game_date: gameDate, home_team: homeTeam, away_team: awayTeam, game_number: gameNumber,
-          source: "espn", bookmaker, market: "totals",
-          home_ml: null, away_ml: null, home_prob: null, away_prob: null,
-          home_spread: null, home_spread_odds: null, away_spread: null, away_spread_odds: null,
-          total_line: total, over_odds: isNaN(oo) ? -110 : oo, under_odds: isNaN(uo) ? -110 : uo,
-          game_time: gameTimeET,
-        });
-      }
-    }
-
-    await new Promise(r => setTimeout(r, 200));
-  }
-
-  const withOdds = rows.filter(r => r.home_ml || r.total_line).length;
-  console.log(`  ✓ ${withOdds} rows from ${new Set(rows.map(r => r.bookmaker)).size} books`);
-  return rows;
+function fmtOdds(n) {
+  if (n == null) return '';
+  return n > 0 ? `+${n}` : String(n);
 }
 
-// ─── Upsert ───────────────────────────────────────────────────────────────────
-async function upsertOdds(rows) {
-  if (!rows.length) return 0;
-  await run("BEGIN TRANSACTION");
-  let n = 0;
-  for (const r of rows) {
-    try {
-      await run(`INSERT OR IGNORE INTO betting_odds (
-        game_date, home_team, away_team, game_number, source, bookmaker, market,
-        home_ml, away_ml, home_prob, away_prob,
-        home_spread, home_spread_odds, away_spread, away_spread_odds,
-        total_line, over_odds, under_odds, game_time
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
-        r.game_date, r.home_team, r.away_team, r.game_number || 1,
-        r.source, r.bookmaker, r.market,
-        r.home_ml, r.away_ml, r.home_prob, r.away_prob,
-        r.home_spread, r.home_spread_odds, r.away_spread, r.away_spread_odds,
-        r.total_line, r.over_odds, r.under_odds, r.game_time ?? null,
-      ]);
-      n++;
-    } catch (_) {}
-  }
-  await run("COMMIT");
-  return n;
-}
+const HEADERS = { "User-Agent": "DiamondEdge/1.0", "Accept": "application/json" };
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log(`Importing ESPN odds for ${targetDate}...`);
-  const rows = await fetchEspn();
-  if (!rows.length) {
-    console.log("No odds data retrieved.");
-    process.exit(0);
+  // Wait for db.js to finish table creation
+  await new Promise(r => setTimeout(r, 800));
+
+  console.log(`\nFetching DraftKings odds for ${targetDate}...\n`);
+
+  // ── Step 1: Game odds (h2h, spreads, totals) ─────────────────────────────
+  console.log("  Fetching game odds (h2h, spreads, totals)...");
+  const oddsUrl = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,spreads,totals&dateFormat=iso&oddsFormat=american&bookmakers=draftkings`;
+  let allGames = [];
+  try {
+    const res = await fetch(oddsUrl, { headers: HEADERS, timeout: 20000 });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rem = res.headers.get("x-requests-remaining");
+    if (rem) console.log(`  (quota: ${rem} requests remaining this month)`);
+    allGames = await res.json();
+    if (!Array.isArray(allGames)) throw new Error("Unexpected response");
+  } catch(e) {
+    console.log(`  ❌ Game odds fetch failed: ${e.message}`);
+    allGames = [];
   }
-  const inserted = await upsertOdds(rows);
-  console.log(`✅ ${inserted} rows saved to betting_odds`);
-  process.exit(0);
+
+  // Filter to target date and build event ID map
+  const todayGames = allGames.filter(g => {
+    const etDate = new Date(g.commence_time).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+    return etDate === targetDate;
+  });
+  console.log(`  ${todayGames.length} game(s) found for ${targetDate}`);
+
+  // Save game odds
+  const oddRows = [];
+  for (const game of todayGames) {
+    const homeTeam = norm(game.home_team);
+    const awayTeam = norm(game.away_team);
+    if (!homeTeam || !awayTeam) continue;
+    const commenceTime = new Date(game.commence_time);
+    const alreadyStarted = commenceTime <= new Date();
+    const gameTimeET = commenceTime.toLocaleTimeString("en-US", {
+      timeZone: "America/New_York", hour: "numeric", minute: "2-digit"
+    }) + " ET";
+
+    for (const book of (game.bookmakers || [])) {
+      if (!/^draftkings$/i.test(book.key)) continue;
+      for (const mkt of (book.markets || [])) {
+        if (!["h2h", "spreads", "totals"].includes(mkt.key)) continue;
+        const row = {
+          game_date: targetDate, home_team: homeTeam, away_team: awayTeam,
+          game_number: 1, source: "odds_api", bookmaker: "DraftKings", market: mkt.key,
+          home_ml: null, away_ml: null, home_prob: null, away_prob: null,
+          home_spread: null, home_spread_odds: null, away_spread: null, away_spread_odds: null,
+          total_line: null, over_odds: null, under_odds: null,
+          game_time: alreadyStarted ? null : gameTimeET,
+        };
+        for (const o of (mkt.outcomes || [])) {
+          const isHome = norm(o.name) === homeTeam;
+          if (mkt.key === "h2h") {
+            if (isHome) { row.home_ml = o.price; row.home_prob = mlToProb(o.price); }
+            else        { row.away_ml = o.price; row.away_prob = mlToProb(o.price); }
+          } else if (mkt.key === "spreads") {
+            if (isHome) { row.home_spread = o.point; row.home_spread_odds = o.price; }
+            else        { row.away_spread = o.point; row.away_spread_odds = o.price; }
+          } else if (mkt.key === "totals") {
+            if (o.name === "Over")  { row.total_line = o.point; row.over_odds  = o.price; }
+            if (o.name === "Under") { row.total_line = o.point; row.under_odds = o.price; }
+          }
+        }
+        if (mkt.key === "h2h" && row.home_ml != null && row.away_ml != null) {
+          if (Math.abs(row.home_ml) > 500 || Math.abs(row.away_ml) > 500) continue;
+        }
+        if (alreadyStarted) continue; // don't overwrite pregame odds with live lines
+        oddRows.push(row);
+      }
+    }
+  }
+
+  if (oddRows.length) {
+    await run("BEGIN TRANSACTION");
+    let saved = 0;
+    for (const r of oddRows) {
+      try {
+        await run(
+          `INSERT OR IGNORE INTO betting_odds
+           (game_date,home_team,away_team,game_number,source,bookmaker,market,
+            home_ml,away_ml,home_prob,away_prob,
+            home_spread,home_spread_odds,away_spread,away_spread_odds,
+            total_line,over_odds,under_odds,game_time)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [r.game_date, r.home_team, r.away_team, r.game_number,
+           r.source, r.bookmaker, r.market,
+           r.home_ml, r.away_ml, r.home_prob, r.away_prob,
+           r.home_spread, r.home_spread_odds, r.away_spread, r.away_spread_odds,
+           r.total_line, r.over_odds, r.under_odds, r.game_time]
+        );
+        saved++;
+      } catch(_) {}
+    }
+    await run("COMMIT");
+    console.log(`  ✓ ${saved} game odds row(s) saved`);
+  } else {
+    console.log("  No game odds rows to save");
+  }
+
+  // ── Step 2: Player props per event ────────────────────────────────────────
+  let kUpdated = 0, hrUpdated = 0;
+
+  for (const game of todayGames) {
+    const homeTeam = norm(game.home_team);
+    const awayTeam = norm(game.away_team);
+    if (!homeTeam || !awayTeam) continue;
+
+    const propsUrl = `https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${game.id}/odds?apiKey=${ODDS_API_KEY}&regions=us&markets=pitcher_strikeouts,batter_home_runs&bookmakers=draftkings&oddsFormat=american`;
+
+    let propsData;
+    try {
+      const pRes = await fetch(propsUrl, { headers: HEADERS, timeout: 15000 });
+      if (!pRes.ok) { console.log(`  ⚠ Props HTTP ${pRes.status} for ${awayTeam}@${homeTeam}`); continue; }
+      propsData = await pRes.json();
+    } catch(e) {
+      console.log(`  ⚠ Props fetch error for ${awayTeam}@${homeTeam}: ${e.message}`);
+      continue;
+    }
+
+    for (const book of (propsData.bookmakers || [])) {
+      if (!/^draftkings$/i.test(book.key)) continue;
+
+      for (const mkt of (book.markets || [])) {
+
+        // ── Pitcher strikeout K lines ──────────────────────────────────────
+        if (mkt.key === "pitcher_strikeouts") {
+          const kMap = {}; // name → { line, overOdds, underOdds }
+          for (const o of (mkt.outcomes || [])) {
+            const name = (o.description || "").trim();
+            if (!name || o.point == null) continue;
+            if (!kMap[name]) kMap[name] = { line: o.point };
+            if (o.name === "Over")  kMap[name].overOdds  = o.price;
+            if (o.name === "Under") kMap[name].underOdds = o.price;
+          }
+          for (const [name, vals] of Object.entries(kMap)) {
+            const lower = name.toLowerCase();
+            // Try exact match first, then last-name fallback
+            const preds = await all(
+              `SELECT pitcher FROM strikeout_predictions WHERE game_date=? AND LOWER(pitcher)=?`,
+              [targetDate, lower]
+            );
+            let matched = preds.map(r => r.pitcher);
+            if (!matched.length) {
+              const lastName = lower.split(" ").slice(-1)[0];
+              const fallback = await all(
+                `SELECT pitcher FROM strikeout_predictions WHERE game_date=? AND LOWER(pitcher) LIKE ?`,
+                [targetDate, `% ${lastName}`]
+              );
+              matched = fallback.map(r => r.pitcher);
+            }
+            for (const pitcher of matched) {
+              await run(
+                `UPDATE strikeout_predictions SET dk_line=?, dk_over_odds=?, dk_under_odds=?
+                 WHERE game_date=? AND pitcher=?`,
+                [vals.line, vals.overOdds ?? null, vals.underOdds ?? null, targetDate, pitcher]
+              );
+              kUpdated++;
+            }
+          }
+        }
+
+        // ── Batter HR odds ────────────────────────────────────────────────
+        if (mkt.key === "batter_home_runs") {
+          for (const o of (mkt.outcomes || [])) {
+            if (o.name !== "Over") continue; // we only want the "to hit a HR" line
+            const name  = (o.description || "").trim();
+            const price = o.price;
+            if (!name || price == null) continue;
+            const lower = name.toLowerCase();
+            // Exact match first
+            const batters = await all(
+              `SELECT batter FROM homerun_predictions WHERE game_date=? AND LOWER(batter)=?`,
+              [targetDate, lower]
+            );
+            let matched = batters.map(r => r.batter);
+            if (!matched.length) {
+              const lastName = lower.split(" ").slice(-1)[0];
+              const fallback = await all(
+                `SELECT batter FROM homerun_predictions WHERE game_date=? AND LOWER(batter) LIKE ?`,
+                [targetDate, `% ${lastName}`]
+              );
+              matched = fallback.map(r => r.batter);
+            }
+            for (const batter of matched) {
+              await run(
+                `UPDATE homerun_predictions SET dk_hr_odds=? WHERE game_date=? AND batter=?`,
+                [price, targetDate, batter]
+              );
+              hrUpdated++;
+            }
+          }
+        }
+      }
+    }
+
+    await new Promise(r => setTimeout(r, 300)); // OddsAPI rate limit courtesy
+  }
+
+  console.log(`\n  ✓ Pitcher K lines updated: ${kUpdated} pitcher(s)`);
+  console.log(`  ✓ Batter HR odds updated:  ${hrUpdated} batter(s)`);
+  console.log("\nDone.\n");
+  setTimeout(() => process.exit(0), 300);
 }
 
 module.exports = {};

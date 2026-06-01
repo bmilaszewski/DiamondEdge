@@ -1353,6 +1353,13 @@ async function loadHomeruns() {
     const normAbbr=t=>({AZ:'ARI',ATH:'OAK',KCR:'KC',TBR:'TB',SDP:'SD',SFG:'SF',WSN:'WSH'}[t]||t);
     const logoImg=(t,cls)=>{const id=MLB_IDS[normAbbr(t)];return id?`<img class="gc-logo ${cls}" src="https://www.mlbstatic.com/team-logos/${id}.svg" onerror="this.style.display='none'" alt="${t}">`:`<div class="gc-logo ${cls}" style="display:flex;align-items:center;justify-content:center;font-family:var(--display);color:var(--muted);font-size:.8rem">${t}</div>`;};
 
+    const fmtDkHR=odds=>{
+      if(odds==null) return '';
+      const s=odds>0?`+${odds}`:String(odds);
+      const c=odds>0?'var(--win)':'var(--muted2)';
+      return `<span style="font-family:var(--mono);font-size:.62rem;color:${c};white-space:nowrap">DK ${s}</span>`;
+    };
+
     const hrBatterRow=(b,rank)=>{
       const pg=b.hr_prob_game||0, ppa=b.hr_prob_pa||0;
       const pill=pg>=15?'pill-green':pg>=10?'pill-yellow':'pill-red';
@@ -1365,6 +1372,7 @@ async function loadHomeruns() {
       return `<div class="hr-brow" data-batter="${b.batter.replace(/"/g,'&quot;')}" style="display:flex;align-items:center;gap:10px;padding:5px 16px;border-top:1px solid var(--border)">
         ${orderCell}
         <span style="flex:1;font-size:.82rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.batter}</span>
+        ${fmtDkHR(b.dk_hr_odds)}
         <div class="prob-wrap" style="min-width:100px">
           <div class="prob-track"><div class="prob-fill" style="width:${bw}%;background:var(--accent2)"></div></div>
           <span class="pill ${pill}" style="font-size:.6rem;padding:1px 6px">${pg.toFixed(1)}%</span>
@@ -1383,6 +1391,7 @@ async function loadHomeruns() {
       return `<div class="hr-brow" data-batter="${b.batter.replace(/"/g,'&quot;')}" style="display:flex;align-items:center;gap:10px;padding:4px 16px;border-top:1px solid rgba(38,48,64,.5)">
         <span style="font-family:var(--mono);font-size:.6rem;color:var(--muted);width:16px;text-align:right">${b.batting_order||''}</span>
         <span style="flex:1;font-size:.80rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.batter}</span>
+        ${fmtDkHR(b.dk_hr_odds)}
         <div class="prob-wrap" style="min-width:90px">
           <div class="prob-track"><div class="prob-fill" style="width:${bw}%;background:var(--accent2)"></div></div>
           <span class="pill ${pill}" style="font-size:.58rem;padding:1px 5px">${pg.toFixed(1)}%</span>
