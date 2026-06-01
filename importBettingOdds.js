@@ -219,7 +219,8 @@ async function main() {
     const awayTeam = norm(game.away_team);
     if (!homeTeam || !awayTeam) continue;
 
-    const propsUrl = `https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${game.id}/odds?apiKey=${ODDS_API_KEY}&regions=us&markets=pitcher_strikeouts,batter_home_runs&bookmakers=draftkings&oddsFormat=american`;
+    // DK for pitcher K lines, BetRivers for HR props (DK doesn't offer batter_home_runs via OddsAPI)
+    const propsUrl = `https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${game.id}/odds?apiKey=${ODDS_API_KEY}&regions=us&markets=pitcher_strikeouts,batter_home_runs&bookmakers=draftkings,betrivers&oddsFormat=american`;
 
     let propsData;
     try {
@@ -231,12 +232,23 @@ async function main() {
       continue;
     }
 
-    for (const book of (propsData.bookmakers || [])) {
-      if (!/^draftkings$/i.test(book.key)) continue;
+    const booksByKey = {};
+    for (const b of (propsData.bookmakers || [])) booksByKey[b.key] = b;
 
+    // Route each market to the right bookmaker
+    const dkBook    = booksByKey["draftkings"];
+    const brBook    = booksByKey["betrivers"];
+    const propBooks = [
+      { book: dkBook, markets: ["pitcher_strikeouts"] },
+      { book: brBook, markets: ["batter_home_runs"] },
+    ];
+
+    for (const { book, markets } of propBooks) {
+      if (!book) continue;
       for (const mkt of (book.markets || [])) {
+        if (!markets.includes(mkt.key)) continue;
 
-        // ── Pitcher strikeout K lines ──────────────────────────────────────
+        // ── Pitcher strikeout K lines (DraftKings) ─────────────────────────
         if (mkt.key === "pitcher_strikeouts") {
           const kMap = {}; // name → { line, overOdds, underOdds }
           for (const o of (mkt.outcomes || [])) {
