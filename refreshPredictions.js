@@ -196,8 +196,12 @@ function saveSO(preds, date) {
       const stmt = db.prepare(
         `INSERT OR REPLACE INTO strikeout_predictions
          (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
-          iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+          iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality,
+          dk_line,dk_over_odds,dk_under_odds)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+           (SELECT dk_line      FROM strikeout_predictions WHERE game_date=? AND pitcher=? AND team=?),
+           (SELECT dk_over_odds FROM strikeout_predictions WHERE game_date=? AND pitcher=? AND team=?),
+           (SELECT dk_under_odds FROM strikeout_predictions WHERE game_date=? AND pitcher=? AND team=?))`
       );
       for (const p of preds) {
         stmt.run([
@@ -205,6 +209,9 @@ function saveSO(preds, date) {
           p.whiff_pct || null, p.chase_pct || null, p.iz_contact_pct || null,
           p.lineup_iz || null, p.lineup_chase || null, p.lineup_bat_speed || null,
           p.lineup_vuln || null, p.exp_k_rate || null, p.data_quality || null,
+          date, p.pitcher, p.team,
+          date, p.pitcher, p.team,
+          date, p.pitcher, p.team,
         ]);
       }
       stmt.finalize(err => err ? reject(err) : resolve(preds.length));
@@ -219,8 +226,9 @@ function saveHR(preds, date) {
       const stmt = db.prepare(
         `INSERT OR REPLACE INTO homerun_predictions
          (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
-          batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+          batting_order,home_team,opponent,temp_f,wind_mph,weather_cond,dk_hr_odds)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+           (SELECT dk_hr_odds FROM homerun_predictions WHERE game_date=? AND batter=? AND team=?))`
       );
       for (const p of preds) {
         stmt.run([
@@ -230,6 +238,7 @@ function saveHR(preds, date) {
           p.park_factor || null, p.weather_factor || null,
           p.batting_order || null, p.home_team || null, p.opponent || null,
           p.temp_f || null, p.wind_mph || null, p.weather_cond || null,
+          date, p.batter, p.team,
         ]);
       }
       stmt.finalize(err => err ? reject(err) : resolve(preds.length));
