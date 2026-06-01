@@ -14,9 +14,22 @@
  */
 
 const db    = require("./db");
+const http  = require("http");
 const fetch = require("node-fetch").default;
 const fs    = require("fs");
 const path  = require("path");
+
+const SERVER_PORT = 3000;
+function bustCache() {
+  return new Promise(resolve => {
+    const req = http.request(
+      { hostname: "127.0.0.1", port: SERVER_PORT, path: "/api/internal/bust-cache", method: "POST" },
+      res => { res.resume(); res.on("end", resolve); }
+    );
+    req.on("error", () => resolve()); // server might not be running — that's fine
+    req.end();
+  });
+}
 
 // ─── API key ──────────────────────────────────────────────────────────────────
 const ODDS_API_KEY = (() => {
@@ -324,6 +337,11 @@ async function main() {
 
   console.log(`\n  ✓ Pitcher K lines updated: ${kUpdated} pitcher(s)`);
   console.log(`  ✓ Batter HR odds updated:  ${hrUpdated} batter(s)`);
+
+  process.stdout.write("\n  Clearing server caches...       ");
+  await bustCache();
+  console.log("done");
+
   console.log("\nDone.\n");
   setTimeout(() => process.exit(0), 300);
 }

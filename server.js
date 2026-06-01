@@ -1727,7 +1727,8 @@ function groupHomeruns(flat) {
       batting_order: p.batting_order || 0,
       batter: p.batter, hr_prob_game: p.hr_prob_per_game ?? p.hr_prob_game,
       hr_prob_pa: p.hr_prob_per_pa ?? p.hr_prob_pa,
-      park_factor: p.park_factor, weather_factor: p.weather_factor
+      park_factor: p.park_factor, weather_factor: p.weather_factor,
+      dk_hr_odds: p.dk_hr_odds ?? null,
     };
     if (p.team === homeTeam) {
       g.home_lineup.push(batter);
