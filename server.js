@@ -1956,7 +1956,7 @@ app.get("/api/predictions/strikeouts", async (req, res) => {
         db.all(
           `SELECT pitcher, team, opponent, pred_k, k_pct, whiff_pct, chase_pct,
                   iz_contact_pct, lineup_iz, lineup_chase, lineup_bat_speed,
-                  lineup_vuln, exp_k_rate, data_quality
+                  lineup_vuln, exp_k_rate, data_quality, dk_line, dk_over_odds, dk_under_odds
            FROM strikeout_predictions WHERE game_date = ? ORDER BY pred_k DESC`,
           [reqDate], (err, rows) => resolve(err ? [] : (rows || []))
         )
@@ -2077,6 +2077,143 @@ app.get("/api/predictions/homeruns", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── DraftKings pitcher K prop lines ──────────────────────────────────────────
+// Fetches today's pitcher strikeout over/under lines from ESPN's DraftKings
+// props feed and writes them into strikeout_predictions.dk_line.
+async function fetchPitcherKProps(date) {
+  if (!nodeFetch) return;
+  const dateCompact = date.replace(/-/g, '');
+  const HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "application/json",
+    "Origin": "https://www.espn.com",
+    "Referer": "https://www.espn.com/mlb/odds",
+  };
+
+  let events;
+  try {
+    const res = await nodeFetch(
+      `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${dateCompact}&limit=30`,
+      { headers: HEADERS, timeout: 12000 }
+    );
+    if (!res.ok) return;
+    events = (await res.json()).events || [];
+  } catch(_) { return; }
+
+  const propLines = {}; // normalized pitcher name → { line, overOdds, underOdds }
+
+  for (const event of events) {
+    const comp = (event.competitions || [])[0];
+    if (!comp) continue;
+    const oddsUrl = comp.odds?.$ref ||
+      `https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb/events/${event.id}/competitions/${event.id}/odds`;
+    try {
+      const ores = await nodeFetch(oddsUrl, { headers: HEADERS, timeout: 8000 });
+      if (!ores.ok) continue;
+      const odata = await ores.json();
+      const providerRefs = (odata.items || []).map(i => i.$ref || (typeof i === 'string' ? i : null)).filter(Boolean);
+
+      for (const pUrl of providerRefs.slice(0, 8)) {
+        try {
+          const pr = await nodeFetch(pUrl, { headers: HEADERS, timeout: 8000 });
+          if (!pr.ok) continue;
+          const pdata = await pr.json();
+          if (!/draftkings/i.test(pdata.provider?.name || '')) continue;
+
+          const propsRef = pdata.props?.$ref || pdata.playerProps?.$ref;
+          if (!propsRef) continue;
+
+          const propRes = await nodeFetch(`${propsRef}?limit=300`, { headers: HEADERS, timeout: 10000 });
+          if (!propRes.ok) continue;
+          const propData = await propRes.json();
+
+          for (const item of (propData.items || [])) {
+            const typeName = (item.type?.name || item.typeName || item.name || '').toLowerCase();
+            if (!typeName.includes('strikeout') && !typeName.includes(' k ') && typeName !== 'pitcher ks') continue;
+            const athleteName = (item.athlete?.displayName || item.athlete?.fullName || '').trim();
+            if (!athleteName) continue;
+            const line = parseFloat(item.overUnder ?? item.total ?? '');
+            if (isNaN(line)) continue;
+            const oo = parseInt(item.overOdds ?? item.over?.price ?? '');
+            const uo = parseInt(item.underOdds ?? item.under?.price ?? '');
+            propLines[athleteName.toLowerCase()] = {
+              line, overOdds: isNaN(oo) ? null : oo, underOdds: isNaN(uo) ? null : uo,
+            };
+          }
+          await new Promise(r => setTimeout(r, 100));
+          break; // found DraftKings, stop scanning providers for this game
+        } catch(_) {}
+      }
+    } catch(_) {}
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  if (!Object.keys(propLines).length) {
+    console.log(`[K props] No DK pitcher K lines found for ${date}`);
+    return;
+  }
+
+  const preds = await new Promise(resolve =>
+    db.all('SELECT pitcher FROM strikeout_predictions WHERE game_date = ?', [date],
+      (e, r) => resolve(e ? [] : (r || [])))
+  );
+
+  let updated = 0;
+  for (const pred of preds) {
+    const lower = pred.pitcher.toLowerCase();
+    let match = propLines[lower];
+    if (!match) {
+      const lastName = lower.split(' ').slice(-1)[0];
+      const found = Object.entries(propLines).find(([k]) => k.endsWith(' ' + lastName));
+      if (found) match = found[1];
+    }
+    if (!match) continue;
+    db.run(
+      `UPDATE strikeout_predictions SET dk_line = ?, dk_over_odds = ?, dk_under_odds = ?
+       WHERE game_date = ? AND pitcher = ?`,
+      [match.line, match.overOdds, match.underOdds, date, pred.pitcher]
+    );
+    updated++;
+  }
+  if (updated) {
+    predictionsCache.strikeouts = { data: null, date: null };
+    console.log(`[K props] Updated ${updated} pitcher K lines for ${date}`);
+  }
+}
+
+// Live SO tracker — returns pitcher-name → { ks, gameState } using MLB Stats API boxscores
+app.get("/api/live/strikeouts", async (req, res) => {
+  const date = req.query.date || etToday();
+  try {
+    const schedR = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`);
+    if (!schedR.ok) return res.json({});
+    const games = ((await schedR.json()).dates || []).flatMap(d => d.games || []);
+    if (!games.length) return res.json({});
+
+    const result = {};
+    await Promise.all(games.map(async game => {
+      if ((game.status?.abstractGameState || 'Preview') === 'Preview') return;
+      const gameState = game.status?.abstractGameState === 'Final' ? 'Final' : 'Live';
+      try {
+        const bsR = await fetch(`https://statsapi.mlb.com/api/v1/game/${game.gamePk}/boxscore`);
+        if (!bsR.ok) return;
+        const bs = await bsR.json();
+        for (const side of ['home', 'away']) {
+          const starterIds = bs.teams?.[side]?.pitchers || [];
+          if (!starterIds.length) continue;
+          const starter = bs.teams[side].players[`ID${starterIds[0]}`];
+          if (!starter) continue;
+          const name = starter.person?.fullName;
+          const ks   = starter.stats?.pitching?.strikeOuts ?? 0;
+          if (name) result[name] = { ks, gameState };
+        }
+      } catch(_) {}
+    }));
+
+    res.json(result);
+  } catch(e) { res.json({}); }
 });
 
 // Live HR tracker — fetches per-game boxscores and returns player-name → { hrs, gameState }
@@ -2548,6 +2685,12 @@ app.listen(3000, () => {
       }
     });
   }, 2000); // 2s delay so the server finishes binding before heavy I/O starts
+
+  // Fetch DK pitcher K lines in background after predictions are likely ready
+  setTimeout(() => {
+    fetchPitcherKProps(etToday()).catch(e =>
+      console.log('[K props] startup fetch error:', e.message));
+  }, 15000);
 });
 
 const { generateReason } = require('./reasonEngine');

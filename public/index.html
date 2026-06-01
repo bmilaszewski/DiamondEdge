@@ -464,6 +464,8 @@ const loaded  = {};
 let currentTab = 'winners';
 let _liveHRs = {};        // name → { hrs, gameState }
 let _liveHRTimer = null;  // polling interval handle
+let _liveSoKs = {};       // name → { ks, gameState }
+let _liveKsTimer = null;  // polling interval handle
 let _dataVersionTimer = null;
 let _lastDataVersion = { lineup: 0, predictions: 0 };
 let hitterSort = 'ops';
@@ -489,7 +491,8 @@ const TITLES = {
 };
 
 function switchTab(tab) {
-  if (tab !== 'homeruns' && _liveHRTimer) { clearInterval(_liveHRTimer); _liveHRTimer = null; }
+  if (tab !== 'homeruns'   && _liveHRTimer)  { clearInterval(_liveHRTimer);  _liveHRTimer  = null; }
+  if (tab !== 'strikeouts' && _liveKsTimer)  { clearInterval(_liveKsTimer);  _liveKsTimer  = null; }
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
@@ -1147,11 +1150,40 @@ async function loadWinners(forceRefresh = false) {
 // ─────────────────────────────────────────────
 // Strikeouts
 // ─────────────────────────────────────────────
+function applyLiveSoKs() {
+  document.querySelectorAll('tr[data-so-pitcher]').forEach(row => {
+    const name = row.dataset.soPitcher;
+    const rec  = _liveSoKs[name];
+    const cell = row.querySelector('.so-actual-cell');
+    if (!cell) return;
+    if (!rec) { cell.innerHTML = '<span style="color:var(--muted2)">—</span>'; return; }
+    const dkLine = parseFloat(row.dataset.dkLine);
+    const color = isNaN(dkLine)
+      ? 'var(--muted2)'
+      : rec.gameState === 'Final'
+        ? (rec.ks >= dkLine ? 'var(--win)' : 'var(--loss)')
+        : 'var(--fg)';
+    const tag = rec.gameState === 'Final' ? ' ✓' : '';
+    cell.innerHTML = `<span style="font-family:var(--mono);font-size:.85rem;font-weight:700;color:${color}">${rec.ks}${tag}</span>`;
+  });
+}
+
+async function fetchLiveSoKs() {
+  try {
+    const data = await fetch(`/api/live/strikeouts?date=${_viewDate}`).then(r => r.json());
+    if (data && typeof data === 'object' && !data.error) {
+      _liveSoKs = data;
+      applyLiveSoKs();
+    }
+  } catch(_) {}
+}
+
 async function loadStrikeouts() {
   const el = document.getElementById('strikeouts-content');
   el.innerHTML=`<div class="state-msg"><div class="spin"></div><div>${_viewDate < _todayET ? 'Loading history…' : 'Running model…'}</div></div>`;
   document.getElementById('strikeouts-stats').innerHTML='';
   loaded.strikeouts=true;
+  if (_liveKsTimer) { clearInterval(_liveKsTimer); _liveKsTimer = null; }
   try {
     const data = await fetch(`/api/predictions/strikeouts?date=${_viewDate}`).then(r=>r.json());
     if (data.error){el.innerHTML=errMsg(data.error);return;}
@@ -1161,9 +1193,7 @@ async function loadStrikeouts() {
     const topK   = data[0];
     const second = data[1] || data[0];
     const over8  = data.filter(p=>p.pred_k>=8).length;
-    // Most vulnerable lineup (highest lineup_vuln = easiest to K)
     const vulnGame = data.reduce((a,b)=>(a.lineup_vuln||0)>(b.lineup_vuln||0)?a:b);
-    // Pitcher with best IZ-contact suppression
     const bestIZ = data.reduce((a,b)=>(a.iz_contact_pct||99)<(b.iz_contact_pct||99)?a:b);
 
     statStrip('strikeouts-stats',[
@@ -1196,19 +1226,25 @@ async function loadStrikeouts() {
       const lch = p.lineup_chase!=null?p.lineup_chase.toFixed(1)+'%':'—';
       const wh  = p.whiff_pct!=null?p.whiff_pct.toFixed(1)+'%':'—';
       const ek  = p.exp_k_rate!=null?p.exp_k_rate.toFixed(1)+'%':'—';
+      const dk  = p.dk_line!=null?p.dk_line.toFixed(1):'—';
+      const dkOdds = p.dk_over_odds!=null&&p.dk_under_odds!=null
+        ? ` <span style="font-size:.65rem;color:var(--muted2)">(o${p.dk_over_odds>0?'+':''}${p.dk_over_odds}/u${p.dk_under_odds>0?'+':''}${p.dk_under_odds})</span>`
+        : '';
 
-      return `<tr data-predk="${p.pred_k}" data-vuln="${vul}">
+      return `<tr data-predk="${p.pred_k}" data-vuln="${vul}" data-so-pitcher="${p.pitcher.replace(/"/g,'&quot;')}" data-dk-line="${p.dk_line??''}">
         <td><span class="rank-num">${i+1}</span></td>
         <td><strong style="font-size:.87rem">${p.pitcher}</strong></td>
         <td><span class="team-chip">${p.team}</span></td>
         <td><span class="team-chip away">${p.opponent}</span></td>
         <td><span class="pill ${kc}" style="font-size:.8rem;font-weight:700">${p.pred_k.toFixed(1)}</span></td>
+        <td class="mono" style="color:var(--muted2)">${dk}${dkOdds}</td>
+        <td class="so-actual-cell" style="text-align:center"><span style="color:var(--muted2)">—</span></td>
         <td class="mono" style="color:var(--muted2)">${p.k_pct?p.k_pct.toFixed(1)+'%':'—'}</td>
-        <td class="mono" style="color:var(--muted2)" title="Pitcher whiff% — overall swing-and-miss rate">${wh}</td>
-        <td class="mono" style="color:var(--muted2)" title="Pitcher chase% — rate at which batters swing at pitches out of the zone (pitcher-induced)">${p.chase_pct!=null?p.chase_pct.toFixed(1)+'%':'—'}</td>
-        <td class="mono" title="Pitcher IZ-contact% allowed — lower = pitcher suppresses in-zone contact = more Ks">${iz}</td>
-        <td class="mono" title="Lineup avg zone contact% — R²=0.695 vs K%, dominant predictor">${liz}</td>
-        <td class="mono" title="Lineup avg chase% (oz_swing) — R²=0.060 vs K%, minor signal">${lch}</td>
+        <td class="mono" style="color:var(--muted2)" title="Pitcher whiff%">${wh}</td>
+        <td class="mono" style="color:var(--muted2)" title="Pitcher chase%">${p.chase_pct!=null?p.chase_pct.toFixed(1)+'%':'—'}</td>
+        <td class="mono" title="IZ-contact% allowed">${iz}</td>
+        <td class="mono" title="Lineup zone contact%">${liz}</td>
+        <td class="mono" title="Lineup chase%">${lch}</td>
         <td class="mono">${bs}</td>
         <td class="mono">${ek}</td>
         <td>
@@ -1227,17 +1263,25 @@ async function loadStrikeouts() {
       <thead><tr>
         <th style="width:32px">#</th><th>Pitcher</th><th>Team</th><th>Opp</th>
         <th data-sort="predk">Proj K's</th>
+        <th title="DraftKings strikeout over/under line">DK Line</th>
+        <th title="Actual strikeouts thrown (live / final)">Actual</th>
         <th title="Pitcher season K%">Season K%</th>
         <th title="Pitcher whiff% (swing-and-miss rate)">Whiff%</th>
-        <th title="Pitcher chase% — how often hitters chase out-of-zone pitches (pitcher-induced)">Chase%</th>
-        <th title="Pitcher in-zone contact% allowed — lower means pitcher suppresses contact better">IZ-Con%</th>
-        <th title="Lineup avg zone contact% — R²=0.695 vs K%, dominant predictor">Lineup IZ%</th>
-        <th title="Lineup avg chase% — R²=0.060 vs K%, minor signal">L-Chase%</th>
-        <th title="Lineup avg bat speed — R²=0.331 vs whiff%, available 2024+">Bat Spd</th>
-        <th title="Expected K rate from pitch-type matchup">Exp K%</th>
-        <th data-sort="vuln" title="Lineup K-vulnerability composite (zone contact dominant)">L-Vuln</th>
+        <th title="Pitcher chase%">Chase%</th>
+        <th title="Pitcher IZ-contact% allowed">IZ-Con%</th>
+        <th title="Lineup avg zone contact%">Lineup IZ%</th>
+        <th title="Lineup avg chase%">L-Chase%</th>
+        <th title="Lineup avg bat speed">Bat Spd</th>
+        <th title="Expected K rate">Exp K%</th>
+        <th data-sort="vuln" title="Lineup K-vulnerability composite">L-Vuln</th>
       </tr></thead><tbody>${rows}</tbody></table>`;
     makeSortable(document.getElementById('tbl-k'));
+
+    // Fetch live Ks immediately then poll every 60s
+    fetchLiveSoKs();
+    if (_viewDate === _todayET) {
+      _liveKsTimer = setInterval(fetchLiveSoKs, 60000);
+    }
   } catch(e){ el.innerHTML=errMsg('Network error: '+e.message); }
 }
 

@@ -437,6 +437,11 @@ db.serialize(() => {
   // Add is_home column to existing DBs that don't have it yet (safe no-op if already exists)
   db.run(`ALTER TABLE daily_lineups ADD COLUMN is_home INTEGER DEFAULT NULL`, () => {});
 
+  // DraftKings pitcher K prop lines (added 2026-06)
+  db.run(`ALTER TABLE strikeout_predictions ADD COLUMN dk_line REAL`, () => {});
+  db.run(`ALTER TABLE strikeout_predictions ADD COLUMN dk_over_odds INTEGER`, () => {});
+  db.run(`ALTER TABLE strikeout_predictions ADD COLUMN dk_under_odds INTEGER`, () => {});
+
   console.log("All tables ready.");
 });
 
