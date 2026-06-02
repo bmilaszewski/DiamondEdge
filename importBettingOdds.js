@@ -400,115 +400,107 @@ async function main() {
     console.log("  No game odds rows to save");
   }
 
-  // ── Step 2: Player props per event ────────────────────────────────────────
+  // ── Step 2: Player props via ESPN propBets (DraftKings, no quota) ────────────
+  console.log("\n  Fetching DK player props via ESPN...");
   let kUpdated = 0, hrUpdated = 0;
 
-  for (const game of allTodayGames) {
-    const homeTeam = norm(game.home_team);
-    const awayTeam = norm(game.away_team);
-    if (!homeTeam || !awayTeam) continue;
+  // Get ESPN scoreboard to get ESPN event IDs and team IDs
+  const dateCompact = targetDate.replace(/-/g, "");
+  let espnEvents = [];
+  try {
+    const sbRes = await fetch(
+      `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${dateCompact}&limit=30`,
+      { headers: ESPN_HEADERS, timeout: 12000 }
+    );
+    if (sbRes.ok) espnEvents = ((await sbRes.json()).events || []);
+  } catch(e) { console.log(`  ⚠ ESPN scoreboard error: ${e.message}`); }
 
-    // DK for pitcher K lines, BetRivers for HR props (DK doesn't offer batter_home_runs via OddsAPI)
-    const propsUrl = `https://api.the-odds-api.com/v4/sports/baseball_mlb/events/${game.id}/odds?apiKey=${ODDS_API_KEY}&regions=us&markets=pitcher_strikeouts,batter_home_runs&bookmakers=draftkings,betrivers&oddsFormat=american`;
+  for (const event of espnEvents) {
+    const comp = (event.competitions || [])[0];
+    if (!comp) continue;
 
-    let propsData;
+    // Build athlete ID → fullName map from both team rosters
+    const athleteMap = {};
+    for (const competitor of (comp.competitors || [])) {
+      const teamId = competitor.team?.id;
+      if (!teamId) continue;
+      try {
+        const rRes = await fetch(
+          `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams/${teamId}/roster`,
+          { headers: ESPN_HEADERS, timeout: 8000 }
+        );
+        if (!rRes.ok) continue;
+        const rData = await rRes.json();
+        for (const group of (rData.athletes || [])) {
+          for (const athlete of (group.items || [])) {
+            if (athlete.id && athlete.fullName) athleteMap[athlete.id] = athlete.fullName;
+          }
+        }
+      } catch(_) {}
+      await new Promise(r => setTimeout(r, 80));
+    }
+
+    // Fetch propBets for this event (provider 100 = DraftKings)
+    let propItems = [];
     try {
-      const pRes = await fetch(propsUrl, { headers: HEADERS, timeout: 15000 });
-      if (!pRes.ok) { console.log(`  ⚠ Props HTTP ${pRes.status} for ${awayTeam}@${homeTeam}`); continue; }
-      propsData = await pRes.json();
-    } catch(e) {
-      console.log(`  ⚠ Props fetch error for ${awayTeam}@${homeTeam}: ${e.message}`);
-      continue;
-    }
-
-    const booksByKey = {};
-    for (const b of (propsData.bookmakers || [])) booksByKey[b.key] = b;
-
-    // Route each market to the right bookmaker
-    const dkBook    = booksByKey["draftkings"];
-    const brBook    = booksByKey["betrivers"];
-    const propBooks = [
-      { book: dkBook, markets: ["pitcher_strikeouts"] },
-      { book: brBook, markets: ["batter_home_runs"] },
-    ];
-
-    for (const { book, markets } of propBooks) {
-      if (!book) continue;
-      for (const mkt of (book.markets || [])) {
-        if (!markets.includes(mkt.key)) continue;
-
-        // ── Pitcher strikeout K lines (DraftKings) ─────────────────────────
-        if (mkt.key === "pitcher_strikeouts") {
-          const kMap = {}; // name → { line, overOdds, underOdds }
-          for (const o of (mkt.outcomes || [])) {
-            const name = (o.description || "").trim();
-            if (!name || o.point == null) continue;
-            if (!kMap[name]) kMap[name] = { line: o.point };
-            if (o.name === "Over")  kMap[name].overOdds  = o.price;
-            if (o.name === "Under") kMap[name].underOdds = o.price;
-          }
-          for (const [name, vals] of Object.entries(kMap)) {
-            const lower = name.toLowerCase();
-            // Try exact match first, then last-name fallback
-            const preds = await all(
-              `SELECT pitcher FROM strikeout_predictions WHERE game_date=? AND LOWER(pitcher)=?`,
-              [targetDate, lower]
-            );
-            let matched = preds.map(r => r.pitcher);
-            if (!matched.length) {
-              const lastName = lower.split(" ").slice(-1)[0];
-              const fallback = await all(
-                `SELECT pitcher FROM strikeout_predictions WHERE game_date=? AND LOWER(pitcher) LIKE ?`,
-                [targetDate, `% ${lastName}`]
-              );
-              matched = fallback.map(r => r.pitcher);
-            }
-            for (const pitcher of matched) {
-              await run(
-                `UPDATE strikeout_predictions SET dk_line=?, dk_over_odds=?, dk_under_odds=?
-                 WHERE game_date=? AND pitcher=?`,
-                [vals.line, vals.overOdds ?? null, vals.underOdds ?? null, targetDate, pitcher]
-              );
-              kUpdated++;
-            }
-          }
-        }
-
-        // ── Batter HR odds ────────────────────────────────────────────────
-        if (mkt.key === "batter_home_runs") {
-          for (const o of (mkt.outcomes || [])) {
-            if (o.name !== "Over") continue; // we only want the "to hit a HR" line
-            const name  = (o.description || "").trim();
-            const price = o.price;
-            if (!name || price == null) continue;
-            const lower = name.toLowerCase();
-            // Exact match first
-            const batters = await all(
-              `SELECT batter FROM homerun_predictions WHERE game_date=? AND LOWER(batter)=?`,
-              [targetDate, lower]
-            );
-            let matched = batters.map(r => r.batter);
-            if (!matched.length) {
-              const lastName = lower.split(" ").slice(-1)[0];
-              const fallback = await all(
-                `SELECT batter FROM homerun_predictions WHERE game_date=? AND LOWER(batter) LIKE ?`,
-                [targetDate, `% ${lastName}`]
-              );
-              matched = fallback.map(r => r.batter);
-            }
-            for (const batter of matched) {
-              await run(
-                `UPDATE homerun_predictions SET dk_hr_odds=? WHERE game_date=? AND batter=?`,
-                [price, targetDate, batter]
-              );
-              hrUpdated++;
-            }
-          }
-        }
+      const pbBase = `https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb/events/${event.id}/competitions/${event.id}/odds/100/propBets`;
+      const p1 = await fetch(`${pbBase}?limit=300&lang=en&region=us`, { headers: ESPN_HEADERS, timeout: 10000 });
+      if (!p1.ok) { await new Promise(r => setTimeout(r, 200)); continue; }
+      const p1Data = await p1.json();
+      propItems = p1Data.items || [];
+      if ((p1Data.count || 0) > 300) {
+        const p2 = await fetch(`${pbBase}?limit=300&page=2&lang=en&region=us`, { headers: ESPN_HEADERS, timeout: 10000 });
+        if (p2.ok) propItems = propItems.concat((await p2.json()).items || []);
       }
+    } catch(e) { await new Promise(r => setTimeout(r, 200)); continue; }
+
+    // Helper: match athlete name to DB rows
+    const matchAndRun = async (name, table, col, sql, params) => {
+      const lower = name.toLowerCase();
+      let rows = await all(`SELECT ${col} FROM ${table} WHERE game_date=? AND LOWER(${col})=?`, [targetDate, lower]);
+      if (!rows.length) {
+        const last = lower.split(" ").slice(-1)[0];
+        rows = await all(`SELECT ${col} FROM ${table} WHERE game_date=? AND LOWER(${col}) LIKE ?`, [targetDate, `% ${last}`]);
+      }
+      for (const row of rows) await run(sql, [...params, row[col]]);
+      return rows.length;
+    };
+
+    // Pitcher K lines — Total Strikeouts (type.name="Total Strikeouts")
+    // ESPN returns pairs: [Over, Under] per athlete in order
+    const kByAthlete = {};
+    for (const item of propItems.filter(i => i.type?.name === "Total Strikeouts")) {
+      const id = item.athlete?.$ref?.match(/athletes\/(\d+)/)?.[1];
+      if (!id) continue;
+      (kByAthlete[id] = kByAthlete[id] || []).push(item);
+    }
+    for (const [id, items] of Object.entries(kByAthlete)) {
+      const name = athleteMap[id];
+      if (!name) continue;
+      const line      = parseFloat(items[0]?.odds?.total?.value);
+      const overOdds  = parseInt(items[0]?.odds?.american?.value);
+      const underOdds = parseInt(items[1]?.odds?.american?.value);
+      if (isNaN(line)) continue;
+      kUpdated += await matchAndRun(name, "strikeout_predictions", "pitcher",
+        `UPDATE strikeout_predictions SET dk_line=?, dk_over_odds=?, dk_under_odds=? WHERE game_date=? AND pitcher=?`,
+        [line, isNaN(overOdds) ? null : overOdds, isNaN(underOdds) ? null : underOdds, targetDate]
+      );
     }
 
-    await new Promise(r => setTimeout(r, 300)); // OddsAPI rate limit courtesy
+    // Batter HR odds — Home Runs Milestones 1+ (to hit at least 1 HR)
+    for (const item of propItems.filter(i => i.type?.name === "Home Runs Milestones" && i.current?.target?.displayValue === "1+")) {
+      const id   = item.athlete?.$ref?.match(/athletes\/(\d+)/)?.[1];
+      const name = athleteMap[id];
+      if (!name) continue;
+      const hrOdds = parseInt(item.odds?.american?.value);
+      if (isNaN(hrOdds)) continue;
+      hrUpdated += await matchAndRun(name, "homerun_predictions", "batter",
+        `UPDATE homerun_predictions SET dk_hr_odds=? WHERE game_date=? AND batter=?`,
+        [hrOdds, targetDate]
+      );
+    }
+
+    await new Promise(r => setTimeout(r, 200));
   }
 
   console.log(`\n  ✓ Pitcher K lines updated: ${kUpdated} pitcher(s)`);
