@@ -158,35 +158,67 @@ async function applyFlip(preds, date) {
 
 // ── save functions ─────────────────────────────────────────────────────────
 
+function getReadyPairs(date) {
+  return new Promise(resolve =>
+    db.all(
+      `SELECT team, opponent, COUNT(*) AS hitters
+       FROM daily_lineups WHERE game_date=? AND batting_order > 0
+       GROUP BY team, opponent`,
+      [date], (e, rows) => {
+        const byTeam = {};
+        for (const r of (rows || [])) byTeam[r.team] = r;
+        const ready = new Set();
+        for (const r of (rows || [])) {
+          const opp = byTeam[r.opponent];
+          if (opp && r.hitters >= 8 && opp.hitters >= 8)
+            ready.add([r.team, r.opponent].sort().join('|'));
+        }
+        resolve(ready);
+      }
+    )
+  );
+}
+
 function saveWinners(preds, date) {
   if (!preds.length) return Promise.resolve(0);
-  return applyFlip(preds, date).then(() => new Promise((resolve, reject) => {
-    db.serialize(() => {
-      const stmt = db.prepare(
-        `INSERT OR REPLACE INTO game_predictions
-         (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,
-          proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side,reason)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?,
-           (SELECT reason FROM game_predictions
-            WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?))`
-      );
-      for (const p of preds) {
-        const gn = p.game_number || 1;
-        db.run(
-          'DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
-          [date, gn, p.home, p.away]
+  return applyFlip(preds, date).then(async () => {
+    const readyPairs = await getReadyPairs(date);
+    const ready = preds.filter(p => readyPairs.has([p.away, p.home].sort().join('|')));
+    if (!ready.length) {
+      console.log('  (no games with confirmed lineups for both teams — skipping save)');
+      return 0;
+    }
+    if (ready.length < preds.length) {
+      process.stdout.write(`  (${preds.length - ready.length} skipped — lineups not confirmed)  `);
+    }
+    return new Promise((resolve, reject) => {
+      db.serialize(() => {
+        const stmt = db.prepare(
+          `INSERT OR REPLACE INTO game_predictions
+           (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,
+            proj_total,home_sp,away_sp,model_prob,vegas_implied,edge,same_side,reason)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?,
+             (SELECT reason FROM game_predictions
+              WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?))`
         );
-        stmt.run([
-          date, gn, p.away, p.home, p.pick, p.confidence,
-          p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
-          p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
-          p.same_side != null ? (p.same_side ? 1 : 0) : null,
-          date, gn, p.away, p.home,
-        ]);
-      }
-      stmt.finalize(err => err ? reject(err) : resolve(preds.length));
+        for (const p of ready) {
+          const gn = p.game_number || 1;
+          db.run(
+            'DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
+            [date, gn, p.home, p.away]
+          );
+          stmt.run([
+            date, gn, p.away, p.home, p.pick, p.confidence,
+            p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
+            p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
+            p.same_side != null ? (p.same_side ? 1 : 0) : null,
+            date, gn, p.away, p.home,
+          ]);
+        }
+        stmt.finalize(err => err ? reject(err) : resolve(ready.length));
+      });
     });
-  }));
+  });
 }
 
 function saveSO(preds, date) {

@@ -1909,7 +1909,13 @@ app.get("/api/predictions/winners", async (req, res) => {
 
     await applyHomeAwayFlip(predictions, today);
 
-    if (!predictions.length) {
+    // Only save predictions for games where both teams have ≥8 confirmed batters.
+    const readyPairs = await getReadyGamePairs(today);
+    const readyPredictions = predictions.filter(p =>
+      readyPairs.has([p.away, p.home].sort().join('|'))
+    );
+
+    if (!readyPredictions.length) {
       return res.json([]);
     }
 
@@ -1921,7 +1927,7 @@ app.get("/api/predictions/winners", async (req, res) => {
           model_prob,vegas_implied,edge,same_side)
          VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?)`
       );
-      for (const p of predictions) {
+      for (const p of readyPredictions) {
         const gn = p.game_number || 1;
         db.run('DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
           [today, gn, p.home, p.away]);
@@ -1935,11 +1941,11 @@ app.get("/api/predictions/winners", async (req, res) => {
       console.error('[save predictions]', saveErr.message);
     }
 
-    generatePickReasons(predictions, today).catch(() => {});
+    generatePickReasons(readyPredictions, today).catch(() => {});
 
-    await enrichWithScheduleSP(predictions, today);
-    predictionsCache.winners = { data: predictions, date: today };
-    res.json(predictions);
+    await enrichWithScheduleSP(readyPredictions, today);
+    predictionsCache.winners = { data: readyPredictions, date: today };
+    res.json(readyPredictions);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2738,32 +2744,35 @@ async function runAndSavePredictions() {
   try {
     // Winner predictions
     const winOutput = await runPythonPredictor('predictorv4.py');
-    const winPreds = parseWinnerPredictions(winOutput);
+    const winPreds  = parseWinnerPredictions(winOutput);
     if (winPreds.length) {
-      // Apply same home/away correction as the request handler so both paths stay in sync.
       await applyHomeAwayFlip(winPreds, today);
-      const stmt = db.prepare(
-        `INSERT OR IGNORE INTO game_predictions
-         (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,proj_total,home_sp,away_sp,
-          model_prob,vegas_implied,edge,same_side)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?)`
-      );
-      for (const p of winPreds) {
-        const gn = p.game_number || 1;
-        // Delete any stale opposite-direction row before inserting the corrected one.
-        db.run('DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
-          [today, gn, p.home, p.away]);
-        stmt.run([today, gn, p.away, p.home, p.pick, p.confidence,
-                  p.home_prob, p.away_prob, p.proj_total, p.home_sp||null, p.away_sp||null,
-                  p.model_prob??null, p.vegas_implied??null, p.edge??null,
-                  p.same_side != null ? (p.same_side ? 1 : 0) : null]);
+      // Only save games where both teams have ≥8 confirmed batters
+      const readyPairs = await getReadyGamePairs(today);
+      const readyWin = winPreds.filter(p => readyPairs.has([p.away, p.home].sort().join('|')));
+      if (readyWin.length) {
+        const stmt = db.prepare(
+          `INSERT OR IGNORE INTO game_predictions
+           (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,proj_total,home_sp,away_sp,
+            model_prob,vegas_implied,edge,same_side)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?)`
+        );
+        for (const p of readyWin) {
+          const gn = p.game_number || 1;
+          db.run('DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
+            [today, gn, p.home, p.away]);
+          stmt.run([today, gn, p.away, p.home, p.pick, p.confidence,
+                    p.home_prob, p.away_prob, p.proj_total, p.home_sp||null, p.away_sp||null,
+                    p.model_prob??null, p.vegas_implied??null, p.edge??null,
+                    p.same_side != null ? (p.same_side ? 1 : 0) : null]);
+        }
+        stmt.finalize();
+        predictionsCache.winners = { data: null, date: null };
+        dataVersion.predictions = Date.now();
+        console.log(`[auto-predict] Winners: ${readyWin.length}/${winPreds.length} game(s) saved (lineup-ready)`);
+        generatePickReasons(readyWin, today).catch(e =>
+          console.log('[auto-predict] reasons error:', e.message));
       }
-      stmt.finalize();
-      predictionsCache.winners = { data: null, date: null };
-      dataVersion.predictions = Date.now();
-      console.log(`[auto-predict] Winners: ${winPreds.length} game(s) saved`);
-      generatePickReasons(winPreds, today).catch(e =>
-        console.log('[auto-predict] reasons error:', e.message));
     }
   } catch (e) { console.log('[auto-predict] Winners error:', e.message); }
 
