@@ -144,14 +144,46 @@ async function main() {
     allGames = [];
   }
 
-  // Filter to target date and build event ID map
+  // Filter to target date from the upcoming-games odds response
   const todayGames = allGames.filter(g => {
     const etDate = new Date(g.commence_time).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
     return etDate === targetDate;
   });
-  console.log(`  ${todayGames.length} game(s) found for ${targetDate}`);
+  console.log(`  ${todayGames.length} upcoming game(s) from odds endpoint for ${targetDate}`);
 
-  // Save game odds
+  // Also fetch ALL events for today (including in-progress/finished) via the events endpoint.
+  // The /odds endpoint only returns upcoming games, so once games start it returns nothing.
+  // The /events endpoint always returns all games for a date range.
+  let allEventIds = new Map(todayGames.map(g => [g.id, g])); // id → game object
+  try {
+    // ET is UTC-4 in summer; cover the full ET calendar day with a UTC window
+    const from = `${targetDate}T05:00:00Z`;       // ~1am ET
+    const nextDate = new Date(new Date(targetDate).getTime() + 86400000)
+      .toISOString().slice(0, 10);
+    const to   = `${nextDate}T05:00:00Z`;
+    const eventsUrl = `https://api.the-odds-api.com/v4/sports/baseball_mlb/events?apiKey=${ODDS_API_KEY}&dateFormat=iso&commenceTimeFrom=${from}&commenceTimeTo=${to}`;
+    const evRes = await fetch(eventsUrl, { headers: HEADERS, timeout: 15000 });
+    if (evRes.ok) {
+      const events = await evRes.json();
+      const rem = evRes.headers.get("x-requests-remaining");
+      if (rem) console.log(`  (quota after events fetch: ${rem})`);
+      let added = 0;
+      for (const ev of (Array.isArray(events) ? events : [])) {
+        if (!allEventIds.has(ev.id)) {
+          allEventIds.set(ev.id, ev);
+          added++;
+        }
+      }
+      if (added) console.log(`  +${added} game(s) from events endpoint (in-progress/finished)`);
+    }
+  } catch(e) {
+    console.log(`  ⚠ Events endpoint error: ${e.message}`);
+  }
+
+  const allTodayGames = Array.from(allEventIds.values());
+  console.log(`  ${allTodayGames.length} total game(s) for ${targetDate}`);
+
+  // Save game odds (only upcoming games have bookmaker odds)
   const oddRows = [];
   for (const game of todayGames) {
     const homeTeam = norm(game.home_team);
@@ -227,7 +259,7 @@ async function main() {
   // ── Step 2: Player props per event ────────────────────────────────────────
   let kUpdated = 0, hrUpdated = 0;
 
-  for (const game of todayGames) {
+  for (const game of allTodayGames) {
     const homeTeam = norm(game.home_team);
     const awayTeam = norm(game.away_team);
     if (!homeTeam || !awayTeam) continue;
