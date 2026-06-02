@@ -119,7 +119,120 @@ function fmtOdds(n) {
   return n > 0 ? `+${n}` : String(n);
 }
 
-const HEADERS = { "User-Agent": "DiamondEdge/1.0", "Accept": "application/json" };
+const HEADERS     = { "User-Agent": "DiamondEdge/1.0", "Accept": "application/json" };
+const ESPN_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept": "application/json, text/plain, */*",
+  "Origin": "https://www.espn.com",
+  "Referer": "https://www.espn.com/mlb/odds",
+};
+
+// ─── ESPN game odds (DraftKings only) ────────────────────────────────────────
+// Reads directly from comp.odds inline array — no extra API calls needed.
+async function fetchEspnOdds() {
+  const dateCompact = targetDate.replace(/-/g, "");
+  let events;
+  try {
+    const res = await fetch(
+      `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${dateCompact}&limit=30`,
+      { headers: ESPN_HEADERS, timeout: 15000 }
+    );
+    if (!res.ok) { console.log(`  ❌ ESPN scoreboard HTTP ${res.status}`); return []; }
+    events = (await res.json()).events || [];
+  } catch(e) { console.log(`  ❌ ESPN fetch error: ${e.message}`); return []; }
+
+  if (!events.length) { console.log("  No ESPN games found"); return []; }
+
+  const rows = [];
+  const seenPairs = {};
+
+  for (const event of events) {
+    const comp = (event.competitions || [])[0];
+    if (!comp) continue;
+
+    const gameState = comp.status?.type?.state;
+    if (gameState === "post") continue;
+
+    let homeTeam = null, awayTeam = null;
+    for (const c of (comp.competitors || [])) {
+      const t = norm(c.team?.displayName || c.team?.name || "") || norm(c.team?.abbreviation || "");
+      if (c.homeAway === "home") homeTeam = t;
+      else awayTeam = t;
+    }
+    if (!homeTeam || !awayTeam) continue;
+
+    const pairId = awayTeam + "|" + homeTeam;
+    seenPairs[pairId] = (seenPairs[pairId] || 0) + 1;
+    const gameNumber = seenPairs[pairId];
+
+    const gameTimeET = event.date
+      ? new Date(event.date).toLocaleTimeString("en-US", {
+          timeZone: "America/New_York", hour: "numeric", minute: "2-digit"
+        }) + " ET"
+      : null;
+
+    // comp.odds is an inline array of bookmaker objects (no $ref traversal needed)
+    const oddsArr = Array.isArray(comp.odds) ? comp.odds : [];
+    for (const odds of oddsArr) {
+      if (!/^draftkings$/i.test(odds.provider?.name || "")) continue;
+
+      // Moneyline — ESPN uses odds.moneyline.{home,away}.close.odds (American string)
+      const homeMLStr = odds.moneyline?.home?.close?.odds ?? odds.homeTeamOdds?.moneyLine;
+      const awayMLStr = odds.moneyline?.away?.close?.odds ?? odds.awayTeamOdds?.moneyLine;
+      const homeML = parseInt(homeMLStr ?? "");
+      const awayML = parseInt(awayMLStr ?? "");
+      const saneML = !isNaN(homeML) && !isNaN(awayML)
+        && Math.abs(homeML) >= 100 && Math.abs(homeML) <= 500
+        && Math.abs(awayML) >= 100 && Math.abs(awayML) <= 500;
+
+      if (saneML) {
+        rows.push({
+          game_date: targetDate, home_team: homeTeam, away_team: awayTeam, game_number: gameNumber,
+          source: "espn", bookmaker: "DraftKings", market: "h2h",
+          home_ml: homeML, away_ml: awayML, home_prob: mlToProb(homeML), away_prob: mlToProb(awayML),
+          home_spread: null, home_spread_odds: null, away_spread: null, away_spread_odds: null,
+          total_line: null, over_odds: null, under_odds: null, game_time: gameTimeET,
+        });
+      }
+
+      // Run line (point spread)
+      const hSpreadLine = parseFloat(odds.pointSpread?.home?.close?.line ?? odds.spread ?? "");
+      const hSpreadOdds = parseInt(odds.pointSpread?.home?.close?.odds ?? "-110");
+      const aSpreadOdds = parseInt(odds.pointSpread?.away?.close?.odds ?? "-110");
+      if (!isNaN(hSpreadLine)) {
+        rows.push({
+          game_date: targetDate, home_team: homeTeam, away_team: awayTeam, game_number: gameNumber,
+          source: "espn", bookmaker: "DraftKings", market: "spreads",
+          home_ml: null, away_ml: null, home_prob: null, away_prob: null,
+          home_spread: hSpreadLine, home_spread_odds: isNaN(hSpreadOdds) ? -110 : hSpreadOdds,
+          away_spread: -hSpreadLine, away_spread_odds: isNaN(aSpreadOdds) ? -110 : aSpreadOdds,
+          total_line: null, over_odds: null, under_odds: null, game_time: gameTimeET,
+        });
+      }
+
+      // Total (over/under)
+      const totalLine = parseFloat(
+        (odds.total?.over?.close?.line ?? "").replace(/[ou]/gi, "") ||
+        (odds.overUnder ?? "")
+      );
+      const overOdds  = parseInt(odds.total?.over?.close?.odds  ?? odds.overOdds  ?? "-110");
+      const underOdds = parseInt(odds.total?.under?.close?.odds ?? odds.underOdds ?? "-110");
+      if (!isNaN(totalLine) && totalLine > 0) {
+        rows.push({
+          game_date: targetDate, home_team: homeTeam, away_team: awayTeam, game_number: gameNumber,
+          source: "espn", bookmaker: "DraftKings", market: "totals",
+          home_ml: null, away_ml: null, home_prob: null, away_prob: null,
+          home_spread: null, home_spread_odds: null, away_spread: null, away_spread_odds: null,
+          total_line: totalLine, over_odds: isNaN(overOdds) ? -110 : overOdds,
+          under_odds: isNaN(underOdds) ? -110 : underOdds, game_time: gameTimeET,
+        });
+      }
+    }
+  }
+
+  console.log(`  ${events.length} ESPN games → ${rows.length} DK odds row(s)`);
+  return rows;
+}
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
@@ -129,9 +242,11 @@ async function main() {
   console.log(`\nFetching DraftKings odds for ${targetDate}...\n`);
 
   // ── Step 1: Game odds (h2h, spreads, totals) ─────────────────────────────
+  // Try OddsAPI first; fall back to ESPN when quota is exhausted.
   console.log("  Fetching game odds (h2h, spreads, totals)...");
   const oddsUrl = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,spreads,totals&dateFormat=iso&oddsFormat=american&bookmakers=draftkings`;
   let allGames = [];
+  let oddsApiAvailable = false;
   try {
     const res = await fetch(oddsUrl, { headers: HEADERS, timeout: 20000 });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -139,9 +254,38 @@ async function main() {
     if (rem) console.log(`  (quota: ${rem} requests remaining this month)`);
     allGames = await res.json();
     if (!Array.isArray(allGames)) throw new Error("Unexpected response");
+    oddsApiAvailable = true;
   } catch(e) {
-    console.log(`  ❌ Game odds fetch failed: ${e.message}`);
-    allGames = [];
+    console.log(`  ⚠ OddsAPI unavailable (${e.message}) — falling back to ESPN`);
+  }
+
+  // If OddsAPI had no data, fetch game odds from ESPN instead
+  if (!oddsApiAvailable || !allGames.length) {
+    const espnRows = await fetchEspnOdds();
+    if (espnRows.length) {
+      await run("BEGIN TRANSACTION");
+      let saved = 0;
+      for (const r of espnRows) {
+        try {
+          await run(
+            `INSERT OR IGNORE INTO betting_odds
+             (game_date,home_team,away_team,game_number,source,bookmaker,market,
+              home_ml,away_ml,home_prob,away_prob,
+              home_spread,home_spread_odds,away_spread,away_spread_odds,
+              total_line,over_odds,under_odds,game_time)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [r.game_date, r.home_team, r.away_team, r.game_number,
+             r.source, r.bookmaker, r.market,
+             r.home_ml, r.away_ml, r.home_prob, r.away_prob,
+             r.home_spread, r.home_spread_odds, r.away_spread, r.away_spread_odds,
+             r.total_line, r.over_odds, r.under_odds, r.game_time]
+          );
+          saved++;
+        } catch(_) {}
+      }
+      await run("COMMIT");
+      console.log(`  ✓ ${saved} ESPN game odds row(s) saved`);
+    }
   }
 
   // Filter to target date from the upcoming-games odds response
