@@ -28,7 +28,80 @@ A full-stack MLB prediction and analytics platform built from scratch. Generates
 | Live data | ESPN Scoreboard API |
 | Odds data | OddsAPI + ESPN odds |
 | Lineup scraping | Node.js + Selenium |
-| Frontend | Vanilla JS, HTML/CSS (single-page app) |
+| Frontend | Next.js + TypeScript + Tailwind (`frontend/`); legacy vanilla JS in `public/` |
+
+---
+
+## Running the App
+
+### Prerequisites
+
+- **Node.js** 18+ (`node -v`)
+- **Python** 3.9+ (`python3 --version`) — required for the prediction models
+
+### 1. Backend (API + legacy UI)
+
+```bash
+npm install
+```
+
+The predictors run as Python and need a few scientific libraries. Create a
+virtualenv once:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install numpy pandas scikit-learn
+```
+
+Start the server:
+
+```bash
+# macOS / Linux — point the server at the venv's Python:
+PYTHON_BIN="$PWD/.venv/bin/python" node server.js
+
+# Windows (the `py` launcher is the default):
+node server.js
+```
+
+The server listens on **http://localhost:3000** by default. Override with `PORT`
+(e.g. `PORT=3100 node server.js`) if that port is taken. It serves the JSON API
+under `/api/*` and the legacy single-page UI from `public/`.
+
+> **Config:** an `ODDS_API_KEY` in a `.env` (or `oddsAPI.env`) file enables live
+> betting odds. Without it, predictions still work; only odds refreshes are skipped.
+
+### 2. Frontend (Next.js — recommended)
+
+The modern UI lives in [`frontend/`](frontend/) (Next.js + TypeScript + Tailwind).
+It calls the backend through a same-origin `/api` proxy.
+
+```bash
+cd frontend
+npm install
+npm run dev            # → http://localhost:3001
+```
+
+If the backend isn't on port 3000, point the proxy at it:
+
+```bash
+API_ORIGIN=http://localhost:3100 npm run dev
+```
+
+Open **http://localhost:3001**. See [`frontend/README.md`](frontend/README.md) for details.
+
+### 3. Generate / refresh predictions
+
+Predictions are built automatically when the backend starts (and every 30 min as
+lineups change). To force a refresh while the server is running:
+
+```bash
+PYTHON_BIN="$PWD/.venv/bin/python" node refreshPredictions.js
+```
+
+> The models read historical game data from `mlb.db`. A fresh database is seeded
+> with the current season's results from ESPN on first run; the full historical
+> backfill (park factors, weather) uses Retrosheet game logs imported separately.
 
 ---
 
