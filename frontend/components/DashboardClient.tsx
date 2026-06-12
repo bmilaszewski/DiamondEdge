@@ -133,7 +133,7 @@ export default function DashboardClient() {
               <div className="mb-3 flex items-center gap-3">
                 <h2 className="font-display text-[1.2rem] tracking-[0.08em] text-muted-2">Strikeout Leaders</h2>
               </div>
-              <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[14px] border border-[color:var(--glass-border)] bg-border shadow-[var(--shadow-card)] backdrop-blur-2xl sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[4px] border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
                 {topKs.map((p) => (
                   <div key={p.pitcher} className="flex cursor-default flex-col gap-2 bg-surface p-[1.2rem] transition-colors hover:bg-surface-2">
                     <div className="flex items-start justify-between">
