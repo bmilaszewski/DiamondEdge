@@ -30,7 +30,7 @@ function etToday() {
 
 function runPython(script) {
   return new Promise((resolve, reject) => {
-    const proc = spawn('py', [path.join(__dirname, script), '--predict'], {
+    const proc = spawn(process.env.PYTHON_BIN || 'py', [path.join(__dirname, script), '--predict'], {
       cwd: __dirname,
       env: { ...process.env, PYTHONUNBUFFERED: '1' },
     });

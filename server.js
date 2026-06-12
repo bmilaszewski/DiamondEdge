@@ -1447,7 +1447,7 @@ let predictionsCache = {
 
 function runPythonPredictor(scriptName) {
   return new Promise((resolve, reject) => {
-    const python = spawn('py', [scriptName, '--predict']);
+    const python = spawn(process.env.PYTHON_BIN || 'py', [scriptName, '--predict']);
     let output = '';
     let errorOutput = '';
     

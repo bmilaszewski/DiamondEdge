@@ -47,3 +47,7 @@ chromedriver_win32/
 
 # ── Editor ──────────────────────────────────────────────────
 .vscode/
+
+# python virtualenv (local)
+.venv/
+venv/
