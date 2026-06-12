@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 type NavItem = { label: string; icon: string; href: string; tab?: string };
 
@@ -31,7 +31,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   },
 ];
 
-function Sidebar() {
+function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const tab = params.get("tab") || "winners";
@@ -42,7 +42,14 @@ function Sidebar() {
   };
 
   return (
-    <aside className="flex w-[212px] min-w-[212px] flex-col border-r border-border bg-surface/95 z-10">
+    <aside
+      className={[
+        "flex w-[212px] min-w-[212px] flex-col border-r border-border bg-surface",
+        "fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        open ? "translate-x-0 shadow-[var(--shadow-pop)]" : "-translate-x-full",
+        "md:static md:z-10 md:translate-x-0 md:shadow-none",
+      ].join(" ")}
+    >
       <div className="border-b border-border px-[18px] pb-4 pt-[22px]">
         <div className="font-display text-[1.7rem] leading-none tracking-[0.07em] text-text">
           Diamond<span className="text-accent drop-shadow-[0_0_12px_rgba(0,229,160,0.5)]">Edge</span>
@@ -62,6 +69,8 @@ function Sidebar() {
                 <Link
                   key={it.label}
                   href={it.href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
                   className={[
                     "group flex items-center gap-[10px] border-l-2 px-[18px] py-2 text-[0.8rem] font-medium transition-all",
                     active
@@ -99,22 +108,44 @@ export default function Shell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
     <div className="relative z-[1] flex h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar open={open} onNavigate={() => setOpen(false)} />
+
+      {/* mobile overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[2px] md:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden
+        />
+      )}
+
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[52px] min-h-[52px] items-center justify-between gap-3 border-b border-border bg-gradient-to-b from-surface-2 to-surface px-[22px]">
+        <header className="flex h-[52px] min-h-[52px] items-center justify-between gap-3 border-b border-border bg-gradient-to-b from-surface-2 to-surface px-[14px] md:px-[22px]">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="font-display whitespace-nowrap text-[1.1rem] tracking-[0.07em] text-text">{title}</span>
+            <button
+              onClick={() => setOpen((v) => !v)}
+              aria-label="Toggle navigation"
+              aria-expanded={open}
+              className="flex h-8 w-8 flex-col items-center justify-center gap-[3px] rounded-[2px] border border-border text-muted-2 transition-colors hover:text-accent md:hidden"
+            >
+              <span className="h-px w-4 bg-current" />
+              <span className="h-px w-4 bg-current" />
+              <span className="h-px w-4 bg-current" />
+            </button>
+            <span className="font-display truncate text-[1rem] tracking-[0.07em] text-text md:text-[1.1rem]">{title}</span>
             {count != null && (
-              <span className="mono whitespace-nowrap rounded-[2px] border border-border bg-surface-2 px-[10px] py-[3px] text-[0.65rem] tracking-[0.1em] text-muted-2">
+              <span className="mono hidden whitespace-nowrap rounded-[2px] border border-border bg-surface-2 px-[10px] py-[3px] text-[0.65rem] tracking-[0.1em] text-muted-2 sm:inline">
                 {count}
               </span>
             )}
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">{actions}</div>
         </header>
-        <main className="flex-1 overflow-y-auto px-[22px] pb-10 pt-5">{children}</main>
+        <main className="flex-1 overflow-y-auto px-[14px] pb-10 pt-5 md:px-[22px]">{children}</main>
       </div>
     </div>
   );

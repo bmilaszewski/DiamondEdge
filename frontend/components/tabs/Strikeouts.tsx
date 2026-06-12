@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import type { StrikeoutPrediction, LiveStrikeouts } from "@/lib/types";
 import { num, pct, dash } from "@/lib/format";
-import { StatStrip, Loading, Empty, SortTable, type Col, type Stat } from "@/components/ui";
+import { StatStrip, TableSkeleton, Empty, SortTable, type Col, type Stat } from "@/components/ui";
 
 const WEIGHTS = [
   { label: "Zone Contact% (60%)", note: "R²=0.695", color: "var(--color-accent)", w: 50 },
@@ -36,10 +36,10 @@ export default function Strikeouts({ date, isToday }: { date: string; isToday: b
     const sorted = [...rows].sort((a, b) => b.pred_k - a.pred_k);
     const strong = rows.filter((r) => r.pred_k >= 8).length;
     return [
-      { label: "Pitchers", value: String(rows.length), sub: "starting today" },
-      { label: "Top Projection", value: num(sorted[0].pred_k, 1), sub: `${sorted[0].pitcher}`, tone: "var(--color-accent-2)" },
-      { label: "8+ K Plays", value: String(strong), sub: "high strikeout", tone: "var(--color-accent)" },
-      { label: "#2 Projection", value: sorted[1] ? num(sorted[1].pred_k, 1) : "—", sub: sorted[1]?.pitcher || "—", tone: "var(--color-accent-3)" },
+      { label: "Pitchers", value: String(rows.length), sub: "starting today", count: { to: rows.length } },
+      { label: "Top Projection", value: num(sorted[0].pred_k, 1), sub: `${sorted[0].pitcher}`, tone: "var(--color-accent-2)", count: { to: sorted[0].pred_k, decimals: 1 } },
+      { label: "8+ K Plays", value: String(strong), sub: "high strikeout", tone: "var(--color-accent)", count: { to: strong } },
+      { label: "#2 Projection", value: sorted[1] ? num(sorted[1].pred_k, 1) : "—", sub: sorted[1]?.pitcher || "—", tone: "var(--color-accent-3)", count: sorted[1] ? { to: sorted[1].pred_k, decimals: 1 } : undefined },
     ];
   }, [rows]);
 
@@ -97,7 +97,7 @@ export default function Strikeouts({ date, isToday }: { date: string; isToday: b
       </div>
 
       {rows === null ? (
-        <Loading msg="Loading strikeout projections…" />
+        <TableSkeleton rows={12} cols={9} />
       ) : !rows.length ? (
         <Empty icon="⚡" msg="No strikeout predictions for this date." />
       ) : (

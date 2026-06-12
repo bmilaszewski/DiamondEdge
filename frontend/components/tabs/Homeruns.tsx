@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import type { HomerunGame, HRBatter, LiveHomeruns } from "@/lib/types";
 import { num, dash, odds as fmtOdds } from "@/lib/format";
-import { StatStrip, Loading, Empty, type Stat } from "@/components/ui";
+import { StatStrip, CardListSkeleton, Empty, type Stat } from "@/components/ui";
 
 function probColor(p: number) {
   if (p >= 15) return "var(--color-accent-2)";
@@ -85,14 +85,14 @@ export default function Homeruns({ date, isToday }: { date: string; isToday: boo
     const strong = all.filter((x) => x.b.hr_prob_game >= 15).length;
     const top = all[0];
     return [
-      { label: "Games", value: String(games.length), sub: "with lineups" },
-      { label: "Top HR Bat", value: top ? `${num(top.b.hr_prob_game, 1)}%` : "—", sub: top?.b.batter, tone: "var(--color-accent-2)" },
-      { label: "15%+ Plays", value: String(strong), sub: "elite HR odds", tone: "var(--color-push)" },
-      { label: "#2 HR Bat", value: all[1] ? `${num(all[1].b.hr_prob_game, 1)}%` : "—", sub: all[1]?.b.batter, tone: "var(--color-accent-3)" },
+      { label: "Games", value: String(games.length), sub: "with lineups", count: { to: games.length } },
+      { label: "Top HR Bat", value: top ? `${num(top.b.hr_prob_game, 1)}%` : "—", sub: top?.b.batter, tone: "var(--color-accent-2)", count: top ? { to: top.b.hr_prob_game, decimals: 1, suffix: "%" } : undefined },
+      { label: "15%+ Plays", value: String(strong), sub: "elite HR odds", tone: "var(--color-push)", count: { to: strong } },
+      { label: "#2 HR Bat", value: all[1] ? `${num(all[1].b.hr_prob_game, 1)}%` : "—", sub: all[1]?.b.batter, tone: "var(--color-accent-3)", count: all[1] ? { to: all[1].b.hr_prob_game, decimals: 1, suffix: "%" } : undefined },
     ];
   }, [games]);
 
-  if (games === null) return <Loading msg="Loading home-run model…" />;
+  if (games === null) return <CardListSkeleton count={4} />;
   if (!games.length) return <Empty icon="◉" msg="No home-run predictions for this date." />;
 
   return (

@@ -158,6 +158,35 @@ export interface DataVersion {
   predictions: number;
 }
 
+export interface HistoricalSituation {
+  inning: number;
+  inning_half: string;
+  balls: number;
+  strikes: number;
+  outs: number;
+  on_first: boolean;
+  on_second: boolean;
+  on_third: boolean;
+  batter: string;
+  pitcher: string;
+}
+export interface HistoricalGame {
+  home_team: string;
+  away_team: string;
+  game_number: number;
+  home_score: number | null;
+  away_score: number | null;
+  home_won: number | null;
+  game_state: "pre" | "in" | "post";
+  game_detail: string | null;
+  situation: HistoricalSituation | null;
+  game_time: string | null;
+}
+export interface HistoricalResponse {
+  date: string;
+  games: HistoricalGame[];
+}
+
 export type LiveStrikeouts = Record<string, { ks: number; gameState: "Live" | "Final" }>;
 export type LiveHomeruns = Record<string, { hrs: number; gameState: "Live" | "Final" | "Preview" }>;
 

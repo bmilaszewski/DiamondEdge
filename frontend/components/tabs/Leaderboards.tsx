@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { HitterLeaderRow, PitcherLeaderRow } from "@/lib/types";
 import { num, pct, dash } from "@/lib/format";
-import { Loading, Empty, SortTable, type Col } from "@/components/ui";
+import { TableSkeleton, Empty, SortTable, type Col } from "@/components/ui";
 
 const rank = (i: number) => <span className="font-display text-[1.05rem] text-muted">{i + 1}</span>;
 
@@ -55,7 +55,7 @@ export function Hitters() {
         ))}
       </div>
       {rows === null ? (
-        <Loading msg="Loading hitters…" />
+        <TableSkeleton rows={12} cols={10} />
       ) : !rows.length ? (
         <Empty icon="◈" msg="No hitter data." />
       ) : (
@@ -118,7 +118,7 @@ export function Pitchers() {
         ))}
       </div>
       {rows === null ? (
-        <Loading msg="Loading pitchers…" />
+        <TableSkeleton rows={12} cols={11} />
       ) : !rows.length ? (
         <Empty icon="◎" msg="No pitcher data." />
       ) : (

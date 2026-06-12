@@ -20,10 +20,19 @@ export const num = (v: number | string | null | undefined, d = 1): string => {
 export const dash = (v: unknown): string =>
   v == null || v === "" ? "—" : String(v);
 
-// American odds formatting: +150 / -120
-export const odds = (v: number | null | undefined): string => {
-  if (v == null || Number.isNaN(v)) return "—";
-  return v > 0 ? `+${v}` : `${v}`;
+// American odds formatting with a typographic minus: +150 / −120
+export const odds = (v: number | string | null | undefined): string => {
+  const n = toNum(v);
+  if (n == null) return "—";
+  return n > 0 ? `+${n}` : `−${Math.abs(n)}`;
+};
+
+// Signed value with real +/− glyphs, e.g. +10.4 / −7.9
+export const signed = (v: number | string | null | undefined, d = 1): string => {
+  const n = toNum(v);
+  if (n == null) return "—";
+  const a = Math.abs(n).toFixed(d);
+  return n > 0 ? `+${a}` : n < 0 ? `−${a}` : a;
 };
 
 // Confidence → pill class + arrow glyph, matching legacy thresholds (62 / 55).

@@ -64,6 +64,7 @@
   50% { box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.4); }
 }
 @keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes shimmer { from { background-position: -180% 0; } to { background-position: 180% 0; } }
 
 /* ---- base ---- */
 * { box-sizing: border-box; }
@@ -128,8 +129,11 @@ body::after {
    Reusable component primitives (used across the app)
    ============================================================ */
 @layer components {
-  .mono { font-family: var(--font-mono); }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   .display { font-family: var(--font-display); }
+
+  /* tabular figures so number columns align everywhere */
+  .tnum { font-variant-numeric: tabular-nums; }
 
   /* card */
   .card {
@@ -234,7 +238,35 @@ body::after {
     box-shadow: inset 2px 0 0 var(--color-accent);
   }
   .dt tbody td { padding: 9px 13px; vertical-align: middle; }
-  .dt td.num { font-family: var(--font-mono); font-size: 0.78rem; }
+  .dt td.num { font-family: var(--font-mono); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+
+  /* sortable header affordance + a11y */
+  .dt thead th[aria-sort="ascending"],
+  .dt thead th[aria-sort="descending"] { color: var(--color-accent); }
+  .dt thead th:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+  /* skeleton loading shimmer */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-surface-2);
+    border-radius: var(--radius-xs);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(122, 149, 168, 0.08) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+
+  /* live game pulse on cards */
+  .is-live {
+    border-color: #d97706 !important;
+    animation: livePulse 2s ease-in-out infinite;
+  }
 
   /* progress / probability bars */
   .track {
@@ -260,6 +292,9 @@ body::after {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     overflow: hidden;
+  }
+  @media (max-width: 640px) {
+    .stat-strip { grid-template-columns: repeat(2, 1fr); }
   }
   .stat-cell {
     position: relative;
@@ -296,6 +331,7 @@ body::after {
     letter-spacing: 0.03em;
     line-height: 1;
     color: var(--color-text);
+    font-variant-numeric: tabular-nums;
   }
   .stat-sub { font-family: var(--font-mono); font-size: 0.6rem; color: var(--color-muted-2); margin-top: 3px; }
 

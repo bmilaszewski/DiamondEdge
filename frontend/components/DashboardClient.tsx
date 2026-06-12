@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Shell from "@/components/Shell";
-import { StatStrip, Loading, type Stat } from "@/components/ui";
+import { StatStrip, CardListSkeleton, type Stat } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { WinnerPrediction, StrikeoutPrediction, UnitsWeeklyResponse } from "@/lib/types";
 import { num, dash, confTone, prettyDate, etTodayISO } from "@/lib/format";
@@ -34,7 +34,7 @@ export default function DashboardClient() {
       { label: "Week Record", value: all ? `${all.wins}-${all.losses}` : "—", sub: "all picks" },
       { label: "Units", value: all ? `${all.units > 0 ? "+" : ""}${num(all.units, 2)}` : "—", sub: "this week", tone: all && all.units >= 0 ? "var(--color-win)" : "var(--color-loss)" },
       { label: "+EV Record", value: ev ? `${ev.wins}-${ev.losses}` : "—", sub: "vs market", tone: "var(--color-accent-3)" },
-      { label: "Pending", value: all ? String(all.pending) : "—", sub: "in progress", tone: "var(--color-push)" },
+      { label: "Pending", value: all ? String(all.pending) : "—", sub: "in progress", tone: "var(--color-push)", count: all ? { to: all.pending } : undefined },
     ];
   }, [week]);
 
@@ -44,7 +44,7 @@ export default function DashboardClient() {
   return (
     <Shell title="Daily Dashboard" count={prettyDate(etTodayISO())}>
       {winners === null ? (
-        <Loading msg="Loading dashboard…" />
+        <CardListSkeleton count={5} />
       ) : (
         <>
           <StatStrip stats={stats} />

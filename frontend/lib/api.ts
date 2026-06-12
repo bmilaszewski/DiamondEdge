@@ -6,6 +6,7 @@ import type {
   StrikeoutPrediction,
   HomerunGame,
   OddsResponse,
+  HistoricalResponse,
   PitcherLeaderRow,
   HitterLeaderRow,
   UnitsWeeklyResponse,
@@ -38,6 +39,9 @@ export const api = {
 
   odds: (date: string) =>
     getJSON<OddsResponse>(`/api/odds/${encodeURIComponent(date)}`, { date, games: [] }),
+
+  historical: (date: string) =>
+    getJSON<HistoricalResponse>(`/api/historical/${encodeURIComponent(date)}`, { date, games: [] }),
 
   liveStrikeouts: (date: string) =>
     getJSON<LiveStrikeouts>(`/api/live/strikeouts?date=${encodeURIComponent(date)}`, {}),

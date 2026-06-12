@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Shell from "@/components/Shell";
-import { DateNav, Loading, Empty, SortTable, type Col } from "@/components/ui";
+import { DateNav, TableSkeleton, Empty, SortTable, type Col } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { WinnerPrediction } from "@/lib/types";
 import { num, dash, confTone, etTodayISO, shiftISO, prettyDate } from "@/lib/format";
@@ -91,7 +91,7 @@ export default function PredictionsClient() {
       }
     >
       {rows === null ? (
-        <Loading msg="Loading picks…" />
+        <TableSkeleton rows={10} cols={7} />
       ) : !rows.length ? (
         <Empty icon="❖" msg="No predictions for this date." />
       ) : (
