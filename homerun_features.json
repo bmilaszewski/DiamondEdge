@@ -1,0 +1,33 @@
+{
+  "feature_cols": [
+    "pitcher_hr_rate",
+    "pitcher_barrel_pct",
+    "pitcher_exit_velo",
+    "pitcher_launch_angle",
+    "pitcher_hard_hit_pct",
+    "pitcher_whiff_pct",
+    "pitcher_xwoba_allowed",
+    "hitter_xwoba",
+    "hitter_slg_vs_pitch",
+    "hitter_whiff_pct",
+    "hitter_season_iso",
+    "hitter_season_hr_rate",
+    "hitter_season_slg",
+    "hitter_recent_iso",
+    "hitter_recent_slg",
+    "hitter_recent_hr_rate",
+    "hitter_barrel_pct",
+    "hitter_exit_velo",
+    "hitter_hard_hit_pct",
+    "hitter_launch_angle",
+    "hitter_h2h_ops",
+    "hitter_h2h_hr_rate",
+    "hitter_h2h_ab",
+    "park_factor"
+  ],
+  "trained_at": "2026-05-01T17:48:27.252657",
+  "cv_auc_mean": 0.5996554299593054,
+  "cv_acc_mean": 0.27018469656992083,
+  "n_training": 25015,
+  "hr_rate": 0.16446132320607634
+}

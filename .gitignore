@@ -44,31 +44,6 @@ chromedriver_win32/
 # ── Claude Code session files ───────────────────────────────
 .claude/
 
-# ── Prediction algorithm (private IP) ───────────────────────
-# Python predictors — the core ML logic
-predictor.py
-predictorV2.py
-predictor_core.py
-predictorv4.py
-hrPredictor.py
-strikeoutPredictor.py
-strikeoutPredictorv2.py
-so_analysis.py
-
-# Trained model weights — can be used directly without the code
-*.pkl
-
-# Model feature configs
-mlb_features.json
-mlb_features_v2.json
-mlb_features_v4.json
-homerun_features.json
-strikeout_features_v2.json
-strikeout_features_v2.json
-
-# Generated ELO ratings
-elo_ratings.json
-elo_ratings_v4.json
 
 # ── Editor ──────────────────────────────────────────────────
 .vscode/
