@@ -46,7 +46,7 @@ function LiveBadge({ live }: { live: Live }) {
   if (live.state === "post")
     return <span className="mono rounded-[2px] border border-border bg-surface-2 px-[6px] py-[1px] text-[0.55rem] uppercase tracking-[0.1em] text-muted-2">Final</span>;
   return (
-    <span className="mono flex items-center gap-[5px] rounded-[2px] border border-[#d97706]/60 bg-[#d97706]/15 px-[6px] py-[1px] text-[0.55rem] font-bold uppercase tracking-[0.1em] text-[#f59e0b]">
+    <span className="mono flex items-center gap-[5px] rounded-[4px] border border-[#d97706]/60 bg-[#d97706]/15 px-[6px] py-[1px] text-[0.55rem] font-bold uppercase tracking-[0.1em] text-[#b45309]">
       <span className="inline-block h-[6px] w-[6px] animate-[pulse_1.2s_infinite] rounded-full bg-[#f59e0b]" />
       {dash(live.detail) !== "—" ? live.detail : "Live"}
     </span>
@@ -62,10 +62,10 @@ function HeroCard({ g, live, ml }: { g: WinnerPrediction; live: Live | null; ml:
   return (
     <div
       ref={ref}
-      className={`reveal relative mb-4 overflow-hidden rounded-[6px] border bg-surface shadow-[var(--shadow-card)] ${live?.state === "in" ? "is-live" : "border-accent/30"}`}
+      className={`reveal relative mb-4 overflow-hidden rounded-[18px] border bg-surface backdrop-blur-2xl shadow-[var(--shadow-card)] ${live?.state === "in" ? "is-live" : "border-accent/30"}`}
     >
       {/* glow */}
-      <div className="pointer-events-none absolute inset-0 opacity-70" style={{ background: "radial-gradient(120% 140% at 50% -20%, rgba(0,229,160,0.12), transparent 60%)" }} />
+      <div className="pointer-events-none absolute inset-0 opacity-80" style={{ background: "radial-gradient(120% 140% at 50% -20%, rgba(6,161,115,0.16), transparent 60%)" }} />
       <div className="relative flex items-center justify-between border-b border-border/70 px-5 py-2">
         <span className="mono text-[0.58rem] font-bold uppercase tracking-[0.22em] text-accent">★ Today&apos;s Top Pick</span>
         {live ? <LiveBadge live={live} /> : <span className="mono text-[0.58rem] uppercase tracking-[0.14em] text-muted">{dash(g.away_sp)} · {dash(g.home_sp)}</span>}
@@ -131,8 +131,8 @@ function GameCard({ g, oddsMap, liveMap, idx }: { g: WinnerPrediction; oddsMap: 
 
   return (
     <div
-      className={`reveal group overflow-hidden rounded-[4px] border bg-surface shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_10px_30px_-14px_rgba(0,229,160,0.35)] ${
-        live?.state === "in" ? "is-live" : "border-border hover:border-accent/30"
+      className={`reveal group overflow-hidden rounded-[14px] border bg-surface backdrop-blur-2xl shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_16px_36px_-16px_rgba(6,161,115,0.4)] ${
+        live?.state === "in" ? "is-live" : "border-[color:var(--glass-border)] hover:border-accent/40"
       }`}
       style={{ animationDelay: `${Math.min(idx * 45, 400)}ms` }}
     >

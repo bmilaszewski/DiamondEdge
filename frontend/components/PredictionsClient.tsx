@@ -106,11 +106,11 @@ export default function PredictionsClient() {
 
       {modal && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/[0.78] backdrop-blur-[6px]"
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#0c2018]/30 backdrop-blur-[6px]"
           onClick={() => setModal(null)}
         >
           <div
-            className="relative w-[92%] max-w-[560px] rounded-[4px] border border-border-2 bg-surface px-[30px] pb-7 pt-8 shadow-[var(--shadow-pop)]"
+            className="relative w-[92%] max-w-[560px] rounded-[16px] border border-[color:var(--glass-border)] bg-surface px-[30px] pb-7 pt-8 backdrop-blur-2xl shadow-[var(--shadow-pop)]"
             style={{ animation: "fadeIn 0.15s ease" }}
             onClick={(e) => e.stopPropagation()}
           >

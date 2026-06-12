@@ -44,7 +44,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
   return (
     <aside
       className={[
-        "flex w-[212px] min-w-[212px] flex-col border-r border-border bg-surface",
+        "flex w-[212px] min-w-[212px] flex-col border-r border-border bg-surface backdrop-blur-2xl",
         "fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
         open ? "translate-x-0 shadow-[var(--shadow-pop)]" : "-translate-x-full",
         "md:static md:z-10 md:translate-x-0 md:shadow-none",
@@ -52,7 +52,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
     >
       <div className="border-b border-border px-[18px] pb-4 pt-[22px]">
         <div className="font-display text-[1.7rem] leading-none tracking-[0.07em] text-text">
-          Diamond<span className="text-accent drop-shadow-[0_0_12px_rgba(0,229,160,0.5)]">Edge</span>
+          Diamond<span className="text-accent drop-shadow-[0_0_14px_rgba(6,161,115,0.4)]">Edge</span>
         </div>
         <div className="mono mt-1 text-[0.6rem] uppercase tracking-[0.15em] text-muted">MLB · Analytics</div>
       </div>
@@ -117,14 +117,14 @@ export default function Shell({
       {/* mobile overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[2px] md:hidden"
+          className="fixed inset-0 z-30 bg-[#0c2018]/25 backdrop-blur-[2px] md:hidden"
           onClick={() => setOpen(false)}
           aria-hidden
         />
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[52px] min-h-[52px] items-center justify-between gap-3 border-b border-border bg-gradient-to-b from-surface-2 to-surface px-[14px] md:px-[22px]">
+        <header className="flex h-[52px] min-h-[52px] items-center justify-between gap-3 border-b border-border bg-surface/80 backdrop-blur-2xl px-[14px] md:px-[22px]">
           <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={() => setOpen((v) => !v)}
