@@ -57,11 +57,12 @@ if (!ODDS_API_KEY) {
 }
 
 // ─── CLI ──────────────────────────────────────────────────────────────────────
-const args      = process.argv.slice(2);
-const dateIdx   = args.indexOf("--date");
+const args       = process.argv.slice(2);
+const dateIdx    = args.indexOf("--date");
 const targetDate = dateIdx !== -1
   ? args[dateIdx + 1]
   : new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+const propsOnly  = args.includes("--props-only"); // skip OddsAPI game odds, ESPN props only
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 const run = (sql, p = []) => new Promise((res, rej) =>
@@ -242,7 +243,9 @@ async function main() {
   console.log(`\nFetching DraftKings odds for ${targetDate}...\n`);
 
   // ── Step 1: Game odds (h2h, spreads, totals) ─────────────────────────────
+  // Skipped when --props-only is passed (e.g. from automatic server refreshes).
   // Try OddsAPI first; fall back to ESPN when quota is exhausted.
+  if (!propsOnly) {
   console.log("  Fetching game odds (h2h, spreads, totals)...");
   const oddsUrl = `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,spreads,totals&dateFormat=iso&oddsFormat=american&bookmakers=draftkings`;
   let allGames = [];
@@ -399,6 +402,9 @@ async function main() {
   } else {
     console.log("  No game odds rows to save");
   }
+  } else {
+    console.log("  Skipping game odds (--props-only mode)");
+  }
 
   // ── Step 2: Player props via ESPN propBets (DraftKings, no quota) ────────────
   console.log("\n  Fetching DK player props via ESPN...");
@@ -454,13 +460,18 @@ async function main() {
       }
     } catch(e) { await new Promise(r => setTimeout(r, 200)); continue; }
 
+    // Strip accents so "Rodón" matches "Rodon", etc.
+    const stripAccents = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+
     // Helper: match athlete name to DB rows
     const matchAndRun = async (name, table, col, sql, params) => {
-      const lower = name.toLowerCase();
-      let rows = await all(`SELECT ${col} FROM ${table} WHERE game_date=? AND LOWER(${col})=?`, [targetDate, lower]);
+      const norm = stripAccents(name).toLowerCase();
+      // Fetch all names for today and match after stripping accents on both sides
+      const candidates = await all(`SELECT ${col} FROM ${table} WHERE game_date=?`, [targetDate]);
+      let rows = candidates.filter(r => stripAccents(r[col]).toLowerCase() === norm);
       if (!rows.length) {
-        const last = lower.split(" ").slice(-1)[0];
-        rows = await all(`SELECT ${col} FROM ${table} WHERE game_date=? AND LOWER(${col}) LIKE ?`, [targetDate, `% ${last}`]);
+        const last = norm.split(' ').slice(-1)[0];
+        rows = candidates.filter(r => stripAccents(r[col]).toLowerCase().endsWith(' ' + last));
       }
       for (const row of rows) await run(sql, [...params, row[col]]);
       return rows.length;

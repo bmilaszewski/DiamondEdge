@@ -1902,50 +1902,8 @@ app.get("/api/predictions/winners", async (req, res) => {
       return res.json(savedWinners);
     }
 
-    // 3. No predictions yet today — run the model for the first time.
-    await fetchAndCacheSchedule(today).catch(() => {});
-    const output = await runPythonPredictor('predictorv4.py');
-    const predictions = parseWinnerPredictions(output);
-
-    await applyHomeAwayFlip(predictions, today);
-
-    // Only save predictions for games where both teams have ≥8 confirmed batters.
-    const readyPairs = await getReadyGamePairs(today);
-    const readyPredictions = predictions.filter(p =>
-      readyPairs.has([p.away, p.home].sort().join('|'))
-    );
-
-    if (!readyPredictions.length) {
-      return res.json([]);
-    }
-
-    // First run of the day — save with INSERT OR IGNORE (never overwrite).
-    try {
-      const stmt = db.prepare(
-        `INSERT OR IGNORE INTO game_predictions
-         (game_date,game_number,away_team,home_team,pick,confidence,home_prob,away_prob,proj_total,home_sp,away_sp,
-          model_prob,vegas_implied,edge,same_side)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?)`
-      );
-      for (const p of readyPredictions) {
-        const gn = p.game_number || 1;
-        db.run('DELETE FROM game_predictions WHERE game_date=? AND game_number=? AND away_team=? AND home_team=?',
-          [today, gn, p.home, p.away]);
-        stmt.run([today, gn, p.away, p.home, p.pick, p.confidence,
-                  p.home_prob, p.away_prob, p.proj_total, p.home_sp || null, p.away_sp || null,
-                  p.model_prob ?? null, p.vegas_implied ?? null, p.edge ?? null,
-                  p.same_side != null ? (p.same_side ? 1 : 0) : null]);
-      }
-      stmt.finalize();
-    } catch (saveErr) {
-      console.error('[save predictions]', saveErr.message);
-    }
-
-    generatePickReasons(readyPredictions, today).catch(() => {});
-
-    await enrichWithScheduleSP(readyPredictions, today);
-    predictionsCache.winners = { data: readyPredictions, date: today };
-    res.json(readyPredictions);
+    // No predictions yet — startup pipeline hasn't finished or refreshPredictions.js hasn't run.
+    return res.json([]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1991,30 +1949,8 @@ app.get("/api/predictions/strikeouts", async (req, res) => {
       return res.json(savedSO);
     }
 
-    // 3. No predictions yet today — run the model for the first time.
-    const output = await runPythonPredictor('strikeoutPredictorv2.py');
-    const predictions = parseStrikeoutPredictions(output);
-
-    if (!predictions.length) { return res.json([]); }
-
-    try {
-      const stmt = db.prepare(
-        `INSERT OR IGNORE INTO strikeout_predictions
-         (game_date,pitcher,team,opponent,pred_k,k_pct,whiff_pct,chase_pct,
-          iz_contact_pct,lineup_iz,lineup_chase,lineup_bat_speed,lineup_vuln,exp_k_rate,data_quality)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-      );
-      for (const p of predictions) {
-        stmt.run([today, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
-                  p.whiff_pct||null, p.chase_pct||null, p.iz_contact_pct||null,
-                  p.lineup_iz||null, p.lineup_chase||null, p.lineup_bat_speed||null,
-                  p.lineup_vuln||null, p.exp_k_rate||null, p.data_quality||null]);
-      }
-      stmt.finalize();
-    } catch (saveErr) { console.error('[save strikeouts]', saveErr.message); }
-
-    predictionsCache.strikeouts = { data: predictions, date: today };
-    res.json(predictions);
+    // No predictions yet — startup pipeline hasn't finished or refreshPredictions.js hasn't run.
+    return res.json([]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2055,33 +1991,8 @@ app.get("/api/predictions/homeruns", async (req, res) => {
       return res.json(grouped);
     }
 
-    // 3. No predictions yet today — run the model for the first time.
-    const output = await runPythonPredictor('hrPredictor.py');
-    const flat   = parseHomerunPredictions(output);
-
-    if (!flat.length) { return res.json([]); }
-
-    try {
-      const stmt = db.prepare(
-        `INSERT OR IGNORE INTO homerun_predictions
-         (game_date,batter,team,vs_pitcher,hr_prob_pa,hr_prob_game,park_factor,weather_factor,
-          batting_order,home_team,opponent,temp_f,wind_mph,weather_cond)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-      );
-      for (const p of flat) {
-        stmt.run([today, p.batter, p.team, p.vs_pitcher||null,
-                  p.hr_prob_per_pa ?? p.hr_prob_pa ?? null,
-                  p.hr_prob_per_game ?? p.hr_prob_game ?? null,
-                  p.park_factor||null, p.weather_factor||null,
-                  p.batting_order||null, p.home_team||null, p.opponent||null,
-                  p.temp_f||null, p.wind_mph||null, p.weather_cond||null]);
-      }
-      stmt.finalize();
-    } catch (saveErr) { console.error('[save homeruns]', saveErr.message); }
-
-    const grouped = groupHomeruns(flat);
-    predictionsCache.homeruns = { data: grouped, date: today };
-    res.json(grouped);
+    // No predictions yet — startup pipeline hasn't finished or refreshPredictions.js hasn't run.
+    return res.json([]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2659,38 +2570,36 @@ app.post('/api/internal/bust-cache', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`⚾  MLB Dashboard running → http://localhost:${PORT}`);
-  // Only purge stale predictions at startup if lineups are already imported for today.
-  // Skip if daily_lineups is empty — runAll.js will import them shortly and purge after.
-  (async () => {
+  // Run the full data pipeline in background on startup:
+  // 1. Wipe today's predictions so they're built fresh with all current stats
+  // 2. Import recent game results (streaks/rolling windows must be current)
+  // 3. Run runAll.js (rosters, lineups, stat enrichment)
+  // 4. Run predictions only after runAll completes — lineup refreshes skip
+  //    predictions until this flag is set
+  setTimeout(async () => {
     const today = etToday();
-    const lineupCount = await new Promise(resolve =>
-      db.get('SELECT COUNT(*) AS n FROM daily_lineups WHERE game_date=?', [today],
-        (e,r) => resolve(r?.n || 0))
-    );
-    if (lineupCount > 0) {
-      purgeUnreadyPredictions(today).catch(e =>
-        console.log('[startup] purge warning:', e.message));
-    } else {
-      console.log('[startup] No lineups for today yet — skipping startup purge');
-    }
-  })();
-  // Run the full data pipeline in background on startup — fetches rosters,
-  // scrapes lineups, imports them, and enriches all stat tables.
-  // Runs silently; the server remains fully responsive while it works.
-  setTimeout(() => {
-    console.log('[startup] Running runAll.js in background…');
-    const proc = spawn('node', ['runAll.js'], { cwd: __dirname, stdio: 'pipe' });
-    proc.stdout?.on('data', d => process.stdout.write('[runAll] ' + d));
-    proc.stderr?.on('data', d => process.stdout.write('[runAll] ' + d));
-    proc.on('error', e => console.log('[runAll] spawn error:', e.message));
-    proc.on('close', code => {
-      console.log(`[runAll] Finished (exit ${code})`);
-      if (code === 0) {
-        dataVersion.lineup = Date.now();
-        runAndSavePredictions().catch(e =>
-          console.log('[runAll] auto-predict error:', e.message));
-      }
+
+    // Step 1: full odds import (OddsAPI game lines used by predictorv4.py for edge/vegas_implied)
+    await runOddsImport(false);
+
+    // Step 2: runAll (rosters, lineups, stat enrichment)
+    console.log('[startup] Running runAll.js…');
+    await new Promise(resolve => {
+      const proc = spawn('node', ['runAll.js'], { cwd: __dirname, stdio: 'pipe' });
+      proc.stdout?.on('data', d => process.stdout.write('[runAll] ' + d));
+      proc.stderr?.on('data', d => process.stdout.write('[runAll] ' + d));
+      proc.on('error', e => { console.log('[runAll] spawn error:', e.message); resolve(); });
+      proc.on('close', code => { console.log(`[runAll] Finished (exit ${code})`); resolve(); });
     });
+    runAllComplete = true;
+    dataVersion.lineup = Date.now();
+
+    // Step 3: import game results (streaks/rolling windows must be current)
+    await runGameResultsImport();
+    gameResultsImportedDate = today;
+
+    // Step 4: backfill dk_line / dk_hr_odds onto any existing prediction rows
+    await runOddsImport(true);
   }, 2000); // 2s delay so the server finishes binding before heavy I/O starts
 
 });
@@ -2825,29 +2734,84 @@ async function runAndSavePredictions() {
   } catch (e) { console.log('[auto-predict] Homeruns error:', e.message); }
 }
 
+// Import yesterday's (and today's) completed game results from ESPN.
+// Returns a Promise that resolves when the child process exits.
+// Safe to call multiple times — INSERT OR IGNORE skips existing rows.
+function runGameResultsImport() {
+  return new Promise(resolve => {
+    console.log('[game-results] Importing recent results from ESPN…');
+    const proc = spawn('node', ['import2026Results.js'], { cwd: __dirname, stdio: 'pipe' });
+    proc.stdout?.on('data', d => process.stdout.write('[game-results] ' + d));
+    proc.stderr?.on('data', d => process.stdout.write('[game-results] ' + d));
+    proc.on('error', e => { console.log('[game-results] spawn error:', e.message); resolve(); });
+    proc.on('close', code => {
+      console.log(`[game-results] Finished (exit ${code})`);
+      resolve();
+    });
+  });
+}
+
+// Fetch game odds (OddsAPI) + player props (ESPN) and write into the DB.
+// propsOnly=true skips OddsAPI game odds (used for frequent post-lineup refreshes).
+// propsOnly=false runs the full import including OddsAPI game lines (used on startup).
+function runOddsImport(propsOnly = true) {
+  return new Promise(resolve => {
+    const args = propsOnly ? ['importBettingOdds.js', '--props-only'] : ['importBettingOdds.js'];
+    console.log(`[odds] Importing ${propsOnly ? 'ESPN props' : 'game odds + props'}…`);
+    const proc = spawn('node', args, { cwd: __dirname, stdio: 'pipe' });
+    proc.stdout?.on('data', d => process.stdout.write('[odds] ' + d));
+    proc.stderr?.on('data', d => process.stdout.write('[odds] ' + d));
+    proc.on('error', e => { console.log('[odds] spawn error:', e.message); resolve(); });
+    proc.on('close', code => {
+      console.log(`[odds] Finished (exit ${code})`);
+      predictionsCache.strikeouts = { data: null, date: null };
+      predictionsCache.homeruns   = { data: null, date: null };
+      resolve();
+    });
+  });
+}
+
+// Track the last calendar date on which game results were imported so we only
+// hit ESPN once per day instead of every 30-minute lineup cycle.
+let gameResultsImportedDate = null;
+
+// Set to true once runAll.js completes on startup. Lineup refreshes skip
+// predictions until this flag is set so every stat is current before the
+// first prediction run of the day.
+let runAllComplete = false;
+
 // Passive lineup refresh — keeps daily_lineups current while the server runs.
 // Scrapes MLB lineup data then imports it to the DB every 30 minutes.
-// Runs sequentially: scrape first, import only if scrape exits cleanly.
+// On the first refresh of each calendar day, imports game results first so
+// streak/rolling-window data is current before predictions run.
 function runLineupRefresh() {
-  console.log('[lineups] Starting scheduled refresh…');
-  const scrape = spawn('node', ['scrapeDailyLineups.js'], { cwd: __dirname, stdio: 'pipe' });
-  scrape.on('error', e => console.log('[lineups] Scrape error:', e.message));
-  scrape.on('close', code => {
-    if (code === 0) {
-      const imp = spawn('node', ['importDailyLineups.js'], { cwd: __dirname, stdio: 'pipe' });
-      imp.on('error', e => console.log('[lineups] Import error:', e.message));
-      imp.on('close', c2 => {
-        console.log(`[lineups] Refresh complete (import exit ${c2})`);
-        dataVersion.lineup = Date.now();
-        // Run all three predictors automatically so predictions are always
-        // up-to-date without waiting for a frontend request.
-        runAndSavePredictions().catch(e =>
-          console.log('[lineups] auto-predict error:', e.message));
-      });
-    } else {
-      console.log(`[lineups] Scrape failed (exit ${code}), skipping import`);
-    }
-  });
+  const today = etToday();
+  const needsResultsImport = gameResultsImportedDate !== today;
+
+  const doLineupRefresh = () => {
+    console.log('[lineups] Starting scheduled refresh…');
+    const scrape = spawn('node', ['scrapeDailyLineups.js'], { cwd: __dirname, stdio: 'pipe' });
+    scrape.on('error', e => console.log('[lineups] Scrape error:', e.message));
+    scrape.on('close', code => {
+      if (code === 0) {
+        const imp = spawn('node', ['importDailyLineups.js'], { cwd: __dirname, stdio: 'pipe' });
+        imp.on('error', e => console.log('[lineups] Import error:', e.message));
+        imp.on('close', c2 => {
+          console.log(`[lineups] Refresh complete (import exit ${c2})`);
+          dataVersion.lineup = Date.now();
+        });
+      } else {
+        console.log(`[lineups] Scrape failed (exit ${code}), skipping import`);
+      }
+    });
+  };
+
+  if (needsResultsImport) {
+    gameResultsImportedDate = today;
+    runGameResultsImport().then(doLineupRefresh);
+  } else {
+    doLineupRefresh();
+  }
 }
 
 setTimeout(runLineupRefresh,  30 * 1000);          // first run 30s after startup

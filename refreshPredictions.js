@@ -48,6 +48,27 @@ function runPython(script) {
   });
 }
 
+function runNode(script, args = []) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('node', [path.join(__dirname, script), ...args], {
+      cwd: __dirname,
+      env: { ...process.env },
+    });
+    proc.stdout.on('data', d => process.stdout.write(d));
+    proc.stderr.on('data', d => process.stderr.write(d));
+    proc.on('error', reject);
+    proc.on('close', code => {
+      if (code !== 0) return reject(new Error(`${script} exited ${code}`));
+      resolve();
+    });
+  });
+}
+
+function dbRun(sql, params = []) {
+  return new Promise((resolve, reject) =>
+    db.run(sql, params, err => err ? reject(err) : resolve()));
+}
+
 function bustCache() {
   return new Promise(resolve => {
     const req = http.request(
@@ -221,8 +242,17 @@ function saveWinners(preds, date) {
   });
 }
 
-function saveSO(preds, date) {
-  if (!preds.length) return Promise.resolve(0);
+async function saveSO(preds, date) {
+  if (!preds.length) return 0;
+  const readyPairs = await getReadyPairs(date);
+  const ready = preds.filter(p => readyPairs.has([p.team, p.opponent].sort().join('|')));
+  if (!ready.length) {
+    process.stdout.write('  (no games with confirmed lineups — skipping save)  ');
+    return 0;
+  }
+  if (ready.length < preds.length) {
+    process.stdout.write(`  (${preds.length - ready.length} skipped — lineups not confirmed)  `);
+  }
   return new Promise((resolve, reject) => {
     db.serialize(() => {
       const stmt = db.prepare(
@@ -235,7 +265,7 @@ function saveSO(preds, date) {
            (SELECT dk_over_odds FROM strikeout_predictions WHERE game_date=? AND pitcher=? AND team=?),
            (SELECT dk_under_odds FROM strikeout_predictions WHERE game_date=? AND pitcher=? AND team=?))`
       );
-      for (const p of preds) {
+      for (const p of ready) {
         stmt.run([
           date, p.pitcher, p.team, p.opponent, p.pred_k, p.k_pct,
           p.whiff_pct || null, p.chase_pct || null, p.iz_contact_pct || null,
@@ -246,7 +276,7 @@ function saveSO(preds, date) {
           date, p.pitcher, p.team,
         ]);
       }
-      stmt.finalize(err => err ? reject(err) : resolve(preds.length));
+      stmt.finalize(err => err ? reject(err) : resolve(ready.length));
     });
   });
 }
@@ -307,6 +337,12 @@ async function main() {
   const today = etToday();
   console.log(`\nRefreshing all predictions for ${today}...\n`);
 
+  process.stdout.write('  Clearing today\'s predictions...  ');
+  await dbRun('DELETE FROM game_predictions     WHERE game_date=?', [today]);
+  await dbRun('DELETE FROM strikeout_predictions WHERE game_date=?', [today]);
+  await dbRun('DELETE FROM homerun_predictions   WHERE game_date=?', [today]);
+  console.log('done');
+
   process.stdout.write('  Running winner predictor...     ');
   try {
     const raw   = await runPython('predictorv4.py');
@@ -338,7 +374,15 @@ async function main() {
     console.log(`FAILED — ${e.message}`);
   }
 
-  process.stdout.write('\n  Clearing server caches...       ');
+  process.stdout.write('\n  Importing ESPN player props...   ');
+  try {
+    await runNode('importBettingOdds.js', ['--props-only']);
+    console.log('done');
+  } catch (e) {
+    console.log(`FAILED — ${e.message} (continuing anyway)`);
+  }
+
+  process.stdout.write('  Clearing server caches...       ');
   await bustCache();
   console.log('done');
 

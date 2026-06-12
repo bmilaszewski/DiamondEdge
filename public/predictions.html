@@ -483,7 +483,6 @@ async function loadStrikeouts() {
     ]);
 
     const rows = data.map((p, i) => {
-      const kCls     = p.pred_k >= 8.5 ? 'pill-green' : p.pred_k >= 6.5 ? 'pill-yellow' : 'pill-red';
       const vuln     = p.lineup_vuln || 0;
       const vSign    = vuln >= 0 ? '+' : '';
       const vColor   = vuln > 0.2 ? 'var(--accent2)' : vuln < -0.2 ? 'var(--accent3)' : 'var(--muted2)';
@@ -494,13 +493,27 @@ async function loadStrikeouts() {
       const fillLeft = vuln >= 0 ? 50 : vulnPct;
       const fillW    = Math.abs(vulnPct - 50);
       const fillClr  = vuln >= 0 ? 'var(--accent2)' : 'var(--accent3)';
+      // Proj K's pill: green ✓ if above DK line, red if below, fallback to thresholds
+      let kCls, kLabel;
+      if (p.dk_line != null) {
+        if (p.pred_k > p.dk_line) { kCls = 'pill-green'; kLabel = `✓ ${p.pred_k.toFixed(1)}`; }
+        else                       { kCls = 'pill-red';   kLabel = p.pred_k.toFixed(1); }
+      } else {
+        kCls   = p.pred_k >= 8.5 ? 'pill-green' : p.pred_k >= 6.5 ? 'pill-yellow' : 'pill-red';
+        kLabel = p.pred_k.toFixed(1);
+      }
+      // DK line column: show raw line, green if over, red if under
+      const dkCell = p.dk_line != null
+        ? `<span class="pill ${p.pred_k > p.dk_line ? 'pill-green' : 'pill-red'}" style="font-size:.78rem;">${p.dk_line}</span>`
+        : `<span style="color:var(--muted2)">—</span>`;
 
       return `<tr data-predk="${p.pred_k}" data-vuln="${vuln}">
         <td><span class="rank-num">${i+1}</span></td>
         <td><strong style="font-size:.88rem">${p.pitcher}</strong></td>
         <td><span class="team-chip">${p.team}</span></td>
         <td><span class="team-chip" style="background:rgba(77,158,255,.08);border-color:rgba(77,158,255,.2);color:var(--muted2);">${p.opponent}</span></td>
-        <td><span class="pill ${kCls}" style="font-size:.82rem;font-weight:700;">${p.pred_k.toFixed(1)}</span></td>
+        <td><span class="pill ${kCls}" style="font-size:.82rem;font-weight:700;">${kLabel}</span></td>
+        <td>${dkCell}</td>
         <td class="mono" style="color:var(--muted2)">${p.k_pct ? p.k_pct.toFixed(1)+'%' : '—'}</td>
         <td class="mono" style="color:var(--muted2)">${p.whiff_pct ? p.whiff_pct.toFixed(1)+'%' : '—'}</td>
         <td class="mono" style="color:var(--muted2)">${p.chase_pct ? p.chase_pct.toFixed(1)+'%' : '—'}</td>
@@ -525,6 +538,7 @@ async function loadStrikeouts() {
         <th>Team</th>
         <th>Opp</th>
         <th data-sort="predk">Proj K's</th>
+        <th title="DraftKings over/under K line — green ✓ means projected K's exceed the line (take the over)">DK Line</th>
         <th>Season K%</th>
         <th>Whiff%</th>
         <th>Chase%</th>

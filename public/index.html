@@ -1158,12 +1158,21 @@ function applyLiveSoKs() {
     if (!cell) return;
     if (!rec) { cell.innerHTML = '<span style="color:var(--muted2)">—</span>'; return; }
     const dkLine = parseFloat(row.dataset.dkLine);
-    const color = isNaN(dkLine)
-      ? 'var(--muted2)'
-      : rec.gameState === 'Final'
-        ? (rec.ks >= dkLine ? 'var(--win)' : 'var(--loss)')
-        : 'var(--fg)';
-    const tag = rec.gameState === 'Final' ? ' ✓' : '';
+    const predK  = parseFloat(row.dataset.predk);
+    let color, tag;
+    if (rec.gameState === 'Final' && !isNaN(dkLine)) {
+      const predictedOver = predK > dkLine;
+      const actualOver    = rec.ks >= dkLine;
+      const correct       = predictedOver === actualOver;
+      color = correct ? 'var(--win)' : 'var(--loss)';
+      tag   = correct ? ' ✓' : ' ✗';
+    } else if (rec.gameState === 'Final') {
+      color = 'var(--muted2)';
+      tag   = ' ✓';
+    } else {
+      color = 'var(--fg)';
+      tag   = '';
+    }
     cell.innerHTML = `<span style="font-family:var(--mono);font-size:.85rem;font-weight:700;color:${color}">${rec.ks}${tag}</span>`;
   });
 }

@@ -64,60 +64,60 @@ function generateRichReason(p, rnd) {
   const oWp = oppWpct   != null ? Number(oppWpct)   : null;
 
   if (pRd != null || pWp != null) {
-    const pW = pWp != null ? Math.round(pWp * 30) : null;
-    const oW = oWp != null ? Math.round(oWp * 30) : null;
+    const pW = pWp != null ? Math.round(pWp * 15) : null;
+    const oW = oWp != null ? Math.round(oWp * 15) : null;
     const rdStr  = pRd != null ? `${pRd >= 0 ? '+' : ''}${pRd.toFixed(2)}`  : null;
     const oRdStr = oRd != null ? `${oRd >= 0 ? '+' : ''}${oRd.toFixed(2)}`  : null;
 
     let streakCtx = '';
-    if (pickWin >= 4)       streakCtx = `, winners of ${pickWin} straight`;
-    else if (pickLoss >= 4) streakCtx = `, losers of their last ${pickLoss}`;
-    else if (oppLoss >= 4)  streakCtx = `, catching ${opp} on a ${oppLoss}-game skid`;
-    else if (oppWin >= 4)   streakCtx = ` (${opp} has also won ${oppWin} straight)`;
+    if (pickWin >= 3)       streakCtx = `, winners of ${pickWin} straight`;
+    else if (pickLoss >= 3) streakCtx = `, losers of their last ${pickLoss}`;
+    else if (oppLoss >= 3)  streakCtx = `, catching ${opp} on a ${oppLoss}-game skid`;
+    else if (oppWin >= 3)   streakCtx = ` (${opp} has also won ${oppWin} straight)`;
 
     const s1 = [];
 
     if (pW != null && oW != null && rdStr && oRdStr) {
       if (pWp >= oWp && pRd >= oRd) {
         s1.push(
-          `Over the last 30 games, ${pick} leads on both fronts — ${pW}-${30-pW} (${(pWp*100).toFixed(0)}%) with a ${rdStr} run differential, compared to ${opp}'s ${oW}-${30-oW} record and ${oRdStr} rdiff${streakCtx}.`,
-          `${pick} enters with the stronger recent résumé: ${pW}-${30-pW} and ${rdStr} run differential against ${opp}'s ${oW}-${30-oW} and ${oRdStr} over the same 30-game window${streakCtx}.`,
-          `The 30-game picture favors ${pick} across the board — ${(pWp*100).toFixed(0)}% winning rate and ${rdStr} run differential against ${opp}'s ${(oWp*100).toFixed(0)}% and ${oRdStr}${streakCtx}.`
+          `Over the last 15 games, ${pick} leads on both fronts — ${pW}-${15-pW} (${(pWp*100).toFixed(0)}%) with a ${rdStr} run differential, compared to ${opp}'s ${oW}-${15-oW} record and ${oRdStr} rdiff${streakCtx}.`,
+          `${pick} enters with the stronger recent résumé: ${pW}-${15-pW} and ${rdStr} run differential against ${opp}'s ${oW}-${15-oW} and ${oRdStr} over the last two weeks${streakCtx}.`,
+          `The recent 15-game picture favors ${pick} across the board — ${(pWp*100).toFixed(0)}% winning rate and ${rdStr} run differential against ${opp}'s ${(oWp*100).toFixed(0)}% and ${oRdStr}${streakCtx}.`
         );
       } else if (pRd != null && oRd != null && pRd > oRd + 0.25) {
         s1.push(
-          `${pick} holds the run differential edge over 30 games at ${rdStr} vs ${opp}'s ${oRdStr} — a scoring-efficiency gap the model treats as a primary indicator of team health, even with records close (${pW}-${30-pW} vs ${oW}-${30-oW})${streakCtx}.`,
-          `The run differential gap tells the story here: ${pick} at ${rdStr} vs ${opp} at ${oRdStr} over 30 games, outpacing them as a more efficient scoring team despite similar win totals${streakCtx}.`
+          `${pick} holds the run differential edge over the last 15 games at ${rdStr} vs ${opp}'s ${oRdStr} — a scoring-efficiency gap the model treats as a primary indicator of current team health, even with records close (${pW}-${15-pW} vs ${oW}-${15-oW})${streakCtx}.`,
+          `The run differential gap tells the story here: ${pick} at ${rdStr} vs ${opp} at ${oRdStr} over their last 15, outpacing them as a more efficient scoring team despite similar win totals${streakCtx}.`
         );
       } else {
         s1.push(
-          `The 30-game snapshot is fairly close — ${pick} ${pW}-${30-pW} (${rdStr} rdiff) vs ${opp} ${oW}-${30-oW} (${oRdStr}) — and the model breaks the near-even recent records using deeper pitching and lineup inputs${streakCtx}.`,
-          `Recent form reads ${pick} ${pW}-${30-pW} (${rdStr} run diff) against ${opp}'s ${oW}-${30-oW} (${oRdStr}) over 30 games, with the model tilting toward ${pick} on the team-level inputs that matter most in this matchup${streakCtx}.`
+          `Recent form is fairly close — ${pick} ${pW}-${15-pW} (${rdStr} rdiff) vs ${opp} ${oW}-${15-oW} (${oRdStr}) over the last 15 — and the model breaks the near-even records using pitcher quality and lineup matchup inputs${streakCtx}.`,
+          `Over the last 15 games: ${pick} ${pW}-${15-pW} (${rdStr} run diff) against ${opp}'s ${oW}-${15-oW} (${oRdStr}), with the model tilting toward ${pick} on the inputs that matter most in this specific matchup${streakCtx}.`
         );
       }
     } else if (pW != null && rdStr) {
       if (pRd > 0.5) {
         s1.push(
-          `${pick} has been the more efficient team recently — ${pW}-${30-pW} over 30 games with a ${rdStr} run differential, a combination the model weights heavily as a current-form indicator${streakCtx}.`,
-          `Entering with a ${pW}-${30-pW} mark and ${rdStr} run differential over their last 30, ${pick} brings the better recent form into this matchup${streakCtx}.`
+          `${pick} has been the more efficient team recently — ${pW}-${15-pW} over their last 15 with a ${rdStr} run differential, a combination the model weights heavily as a current-form indicator${streakCtx}.`,
+          `Entering ${pW}-${15-pW} with a ${rdStr} run differential over their last 15 games, ${pick} brings the better recent form into this matchup${streakCtx}.`
         );
       } else {
         s1.push(
-          `Over 30 games, ${pick} is ${pW}-${30-pW} with a ${rdStr} run differential — the baseline the model uses as its primary current-team-health input${streakCtx}.`
+          `Over their last 15 games, ${pick} is ${pW}-${15-pW} with a ${rdStr} run differential — the short-window baseline the model uses as its primary current team-health signal${streakCtx}.`
         );
       }
     } else if (pRd != null) {
       if (pRd > 0.4) {
         s1.push(
-          `${pick} has outscored opponents by ${rdStr} runs per game over their last 30 — a positive run-differential that the model treats as one of its strongest team-quality signals${streakCtx}.`
+          `${pick} has outscored opponents by ${rdStr} runs per game over their last 15 — a positive run-differential that the model treats as one of its strongest current-form signals${streakCtx}.`
         );
       } else if (pRd < -0.35) {
         s1.push(
-          `Despite a ${rdStr} run differential over 30 games, the model still grades ${pick} ahead in this matchup — the pitcher and lineup inputs in this specific contest override the recent team-level deficit${streakCtx}.`
+          `Despite a ${rdStr} run differential recently, the model still grades ${pick} ahead in this matchup — the pitcher and lineup inputs in this specific contest override the recent team-level deficit${streakCtx}.`
         );
       } else {
         s1.push(
-          `${pick} enters roughly neutral on 30-game run differential (${rdStr}), with the model's edge coming from the pitcher quality and lineup matchup components${streakCtx}.`
+          `${pick} enters roughly neutral on recent run differential (${rdStr}), with the model's edge coming from the pitcher quality and lineup matchup components${streakCtx}.`
         );
       }
     }

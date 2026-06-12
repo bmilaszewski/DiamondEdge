@@ -1,0 +1,17 @@
+{
+  "feature_cols": [
+    "elo_diff",
+    "home_win_pct",
+    "away_win_pct",
+    "home_rpg",
+    "away_rpg",
+    "home_win_pct_diff",
+    "home_rpg_diff"
+  ],
+  "trained_at": "2026-04-05T18:29:42.632779",
+  "n_games": 232401,
+  "cv_auc_mean": 0.5822797896956118,
+  "cv_acc_mean": 0.5667570288900937,
+  "cv_brier_mean": 0.24324914581628604,
+  "cv_logloss_mean": 0.679515340352091
+}

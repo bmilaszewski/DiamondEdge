@@ -1,0 +1,10 @@
+{
+  "feature_cols": [
+    "is_day_game",
+    "wx_is_dome"
+  ],
+  "trained_at": "2026-04-05T13:14:52.057148",
+  "n_games": 20336,
+  "cv_auc_mean": 0.507197764231248,
+  "cv_acc_mean": 0.5327637078927956
+}
